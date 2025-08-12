@@ -1,0 +1,120 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+}
+
+.header {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+
+.title {
+  font-size: 2rem;
+  color: #003087; 
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+.qrContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.qrInfo {
+  flex: 1;
+  text-align: left;
+}
+
+.qrInfo p {
+  font-size: 1.1rem;
+  color: #333;
+  margin: 10px 0;
+}
+
+.qrInfo .label {
+  font-weight: 600;
+  color: #003087; 
+}
+
+.qrCode {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.qrCode img {
+  max-width: 200px;
+  height: auto;
+  border: 2px solid #003087;
+  border-radius: 8px;
+}
+
+.note {
+  font-size: 1rem;
+  color: #e74c3c; 
+  margin: 20px 0;
+  font-style: italic;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: center;
+}
+
+.backBtn {
+  background-color: #003087; 
+  color: #ffffff;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.backBtn:hover {
+  background-color: #0051cc; 
+}
+
+.backBtn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .qrContainer {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .qrInfo {
+    text-align: center;
+  }
+
+  .qrCode img {
+    max-width: 150px;
+  }
+
+  .header {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}

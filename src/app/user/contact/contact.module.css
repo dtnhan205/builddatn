@@ -1,0 +1,189 @@
+.contactPage {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1290px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+  }
+  
+  .contactHeader {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .contactHeader h1 {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #000;
+  }
+  
+  .contactHeader p {
+    font-size: 16px;
+    margin: 0;
+  }
+  
+  .contactContent {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+  }
+  
+  .contactInfo {
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .logoContainer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 30px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .logo {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+  }
+  
+  .logo img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+  
+  .logo h2 {
+    font-size: 22px;
+    margin: 10px 0 5px;
+    color: #3c7a3e;
+  }
+  
+  .slogan {
+    text-align: center;
+    font-style: italic;
+    font-size: 14px;
+    color: #777;
+  }
+  
+  .slogan p {
+    margin: 0;
+  }
+  
+
+  .infoDetails {
+    flex: 2;
+    min-width: 250px;
+    border-top: none; 
+    border-bottom: none;
+    padding: 0;
+  }
+  
+  .infoItem {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  
+  .infoItem i {
+    margin-right: 10px;
+    min-width: 20px;
+    font-size: 16px;
+    color: #3c7a3e;
+  }
+  
+  .mapContainer {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .mapContainer img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  
+  .contactForm {
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .formHeader {
+    margin-bottom: 20px;
+  }
+  
+  .formHeader h2 {
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+  
+  .formHeader p {
+    font-size: 16px;
+    margin: 0;
+  }
+  
+  .contactForm form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .formRow {
+    display: flex;
+    gap: 15px;
+  }
+  
+  .contactForm input, 
+  .contactForm textarea {
+    height: 50px;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+   
+  }
+  
+  .formRow input {
+    
+    width: 300px;
+  }
+  
+  .contactForm textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  
+  .submitBtn {
+    background-color: #3c7a3e;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .submitBtn:hover {
+    background-color: #2d5c2f;
+  }
+  
+  @media (max-width: 768px) {
+    .contactContent {
+      flex-direction: column;
+    }
+    
+    .formRow {
+      flex-direction: column;
+    }
+    
+    .formRow input {
+      width: 100%;
+    }
+  }

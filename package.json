@@ -1,0 +1,44 @@
+{
+  "name": "pure-botanica",
+  "homepage": "https://purebotanica.online",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+     "dev": "node server.js",
+    "build": "next build",
+    "start": "NODE_ENV=production node server.js"
+  },
+  "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-regular-svg-icons": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.3",
+    "@remirror/react": "^3.0.2",
+    "axios": "^1.8.4",
+    "chart.js": "^4.5.0",
+    "emailjs-com": "^3.2.0",
+    "express": "^5.1.0",
+    "jwt-decode": "^4.0.0",
+    "next": "^15.3.1",
+    "react": "^19.1.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.1.0",
+    "react-google-charts": "^5.2.1",
+    "react-hot-toast": "^2.5.2",
+    "react-image-crop": "^11.0.10",
+    "react-router-dom": "^7.6.0",
+    "react-toastify": "^11.0.5",
+    "sanitize-html": "^2.17.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.9.36",
+    "@types/node": "20.17.47",
+    "@types/react": "19.1.4",
+    "@types/react-chartjs-2": "^2.0.2",
+    "@types/react-dom": "^19",
+    "typescript": "5.8.3"
+  }
+}

@@ -1,0 +1,198 @@
+.containerCategory {
+  margin-left: 250px;
+  padding: 2rem 1.5rem;
+  background: #f3f4f6;
+  min-height: 100vh;
+  font-family: Inter, 'Segoe UI', Roboto, sans-serif;
+  color: #1e293b;
+  transition: margin-left 0.3s;
+  justify-content: center;
+  display: flex;
+}
+
+.titleContainer {
+  max-width: 1400px;
+  padding: 2rem;
+}
+
+.titleContainer h1 {
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  letter-spacing: -0.5px;
+}
+
+.addCategoryForm {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px 0;
+  max-width: 550px;
+}
+
+.formGroup {
+  padding: 0 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #334155;
+  font-size: 20px;
+  width: 100%;
+}
+
+.inputContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 280px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") no-repeat 12px center;
+  background-size: 18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.searchInput:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.searchInput::placeholder {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.inputError {
+  border-color: #f44336;
+}
+
+.inputDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.errorMessage {
+  color: #f44336;
+  font-size: 14px;
+  margin-top: 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.formButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.btnAdd,
+.btnCancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btnAdd {
+  background: #4CAF50;
+  color: white;
+}
+
+.btnAdd:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.btnAdd:disabled {
+  background: #8bc58d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btnCancel {
+  background: #f44336;
+  color: white;
+}
+
+.btnCancel:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.btnAdd:focus-visible,
+.btnCancel:focus-visible {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
+
+.notification {
+  padding: 12px 20px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+  cursor: pointer;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.notification.success {
+  background: #e6fffa;
+  color: #2d3748;
+  border: 1px solid #4fd1c5;
+}
+
+.notification.error {
+  background: #fff5f5;
+  color: #742a2a;
+  border: 1px solid #f56565;
+}
+
+@media (max-width: 1280px) {
+  .containerCategory,
+  .titleContainer,
+  .addCategoryForm {
+    max-width: 100%;
+    margin: 0 0 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .containerCategory {
+    margin-left: 0;
+    padding: 1rem;
+  }
+}

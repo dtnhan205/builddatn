@@ -1,0 +1,19 @@
+.scroll-item {
+  opacity: 0;
+  transform: translateY(40px) scale(0.9); 
+  filter: blur(3px);
+  transition: opacity 0.6s ease-out, 
+              transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.6s ease-out,
+              box-shadow 0.6s ease-out;
+  
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+.scroll-item.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1.0); 
+  filter: blur(0);
+}

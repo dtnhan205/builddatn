@@ -1,0 +1,139 @@
+.container {
+  padding: 20px;
+  text-align: center;
+  color: rgb(141, 0, 0);
+  min-height: 700px;
+  font-family: Arial, sans-serif;
+}
+
+.header {
+  margin-top: 100px;
+}
+
+.qrContainer {
+  background: linear-gradient(50deg, #ffffff, #dbffd4);
+  color: #333;
+  padding: 20px;
+  border-radius: 15px;
+  max-width: 1000px;
+  margin: 0 auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-around;
+}
+
+.qrContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(to right, #6fd692, #70ce75);
+}
+
+.qrInfo {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.qrInfo p {
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  color: rgb(0, 0, 0);
+}
+
+.qrInfo p span {
+  font-weight: bold;
+  margin-right: 10px;
+  width: 130px;
+  color: #1a1a1a;
+}
+
+.qrInfo p::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.qrInfo p:nth-child(1)::before { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23007BFF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>') no-repeat center; }
+.qrInfo p:nth-child(2)::before { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23007BFF"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>') no-repeat center; }
+.qrInfo p:nth-child(3)::before { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23D81B60"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v4h2v2h-2v2h4v-6h-2v-2z"/></svg>') no-repeat center; }
+.qrInfo p:nth-child(4)::before { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2328A745"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-2h-2v2zm0-4h2v-8h-2v8z"/></svg>') no-repeat center; }
+.qrInfo p:nth-child(5)::before { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2328A745"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 12.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-6.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>') no-repeat center; }
+.qrInfo p:nth-child(6)::before { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FFC107"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6h2v-2h2v-2h-2V7zm0 8h-2v2h2v-2z"/></svg>') no-repeat center; }
+
+.qrCode {
+  margin: 20px 0;
+  padding: 0; 
+  background: none; 
+  border: none; 
+  border-radius: 0; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qrCode img {
+  width: 230px; 
+  height: 230px; 
+  border: 2px solid #fff; 
+  border-radius: 5px; 
+}
+
+.note {
+  font-size: 0.9em;
+  color: #000000;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.backBtn {
+  background-color: #b96f33;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.backBtn:hover {
+  background-color: #834818;
+}
+
+
+@media (max-width: 768px) {
+  .qrContainer {
+    flex-direction: column;
+    max-width: 100%;
+    padding: 15px;
+  }
+
+  .qrInfo {
+    margin-bottom: 20px;
+  }
+
+  .qrCode {
+    margin-top: 20px;
+  }
+
+  .qrCode img {
+    width: 200px; 
+    height: 200px;
+  }
+
+  .note {
+    width: 90%;
+  }
+}

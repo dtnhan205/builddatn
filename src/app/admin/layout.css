@@ -1,0 +1,179 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+   
+}
+
+
+.sidebar {
+    z-index: 1000;
+    width: 220px;
+    background: #ffffff;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    
+   
+}
+
+.logo {
+    padding: 20px;
+  
+}
+
+.logo img {
+   width: 200px;
+}
+
+.menu {
+    z-index: 1000;
+    padding: 15px 0;
+    z-index: 1000;
+}
+
+.menu-item {
+    margin-left: 10px;
+    border-radius: 10px;
+    width: 220px;
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #357E38;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 16px;
+}
+
+.menu-item:hover {
+    border-radius: 10px;
+    width: 220px;
+    background-color: #fff3e0;
+    color: #F15E2C;
+}
+.menu-item i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}
+
+.divider {
+    height: 1px;
+    background-color: #e5e5e5;
+    margin: 10px 0;
+}
+
+
+.header {
+    position: fixed;
+    top: 0;
+    left: 250px;
+    right: 0;
+    height: 70px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 1000;
+   
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: #f5f5f5;
+    border-radius: 20px;
+    padding: 8px 15px;
+    width: 300px;
+}
+.search-box img{
+    width: 20px;
+}
+
+.search-box input {
+    border: none;
+    background: none;
+    outline: none;
+    padding: 5px;
+    width: 100%;
+    margin-left: 5px;
+    font-size: 14px;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.notification {
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.language-selector {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.language-selector img {
+    width: 50px;
+    height: 40px;
+    object-fit: cover;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.user-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-info {
+    text-align: right;
+}
+
+.user-name {
+    font-weight: bold;
+    font-size: 14px;
+    color: #357E38;
+}
+
+.user-role {
+    font-size: 12px;
+    color: #666;
+}

@@ -1,0 +1,129 @@
+.toast {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  padding: 15px 25px;
+  background-color: rgba(255, 255, 255, 0.95); 
+  color: #2e4a66; 
+  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 0 8px rgba(135, 206, 235, 0.2);
+  z-index: 1000;
+  transition: all 0.5s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 300px;
+  max-width: 400px;
+  transform: translateX(110%) scale(0.8) skewX(0deg);
+  opacity: 0;
+  border-left: 4px solid transparent; 
+}
+
+.toast.success {
+  border-left-color: #3cb371; 
+}
+
+.toast.error {
+  border-left-color: #ff4444; 
+}
+
+.toast.warning {
+  border-left-color: #f4c430; 
+}
+
+@keyframes waterDropIn {
+  0% {
+    transform: translateX(110%) scale(0.8) skewX(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-10%) scale(1.2) skewX(-10deg);
+    opacity: 0.8;
+  }
+  70% {
+    transform: translateX(5%) scale(1.05) skewX(-5deg);
+  }
+  90% {
+    transform: translateX(0) scale(1.02) skewX(-2deg);
+  }
+  100% {
+    transform: translateX(0) scale(1) skewX(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes waterDropOut {
+  0% {
+    transform: translateX(0) scale(1) skewX(0deg);
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(5%) scale(1.05) skewX(2deg);
+  }
+  70% {
+    transform: translateX(-10%) scale(0.9) skewX(5deg);
+  }
+  100% {
+    transform: translateX(110%) scale(0.8) skewX(0deg);
+    opacity: 0;
+  }
+}
+
+.toast.show {
+  animation: waterDropIn 0.6s ease-out forwards;
+}
+
+.toast.hide {
+  animation: waterDropOut 0.6s ease-out forwards;
+}
+
+.toast.show:hover {
+  transform: translateX(0) scale(1.05) skewX(-3deg);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.toast .message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.toast .close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #87ceeb; 
+  cursor: pointer;
+  padding: 0 10px;
+  transition: color 0.3s ease;
+}
+
+.toast .close-btn:hover {
+  color: #4a90e2; 
+}
+
+@media (max-width: 600px) {
+  .toast {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: unset;
+    max-width: unset;
+    width: auto;
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 400px) {
+  .toast {
+    font-size: 13px;
+    padding: 10px 15px;
+    border-radius: 6px;
+  }
+}

@@ -1,0 +1,486 @@
+
+
+
+.container {
+  max-width: 1290px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+
+.steps {
+  display: flex;
+  align-items: center;
+  margin-bottom: 70px;
+  justify-content: center;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+}
+
+.stepNumber {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.step:nth-child(1) .stepNumber,
+.step:nth-child(3) .stepNumber {
+  background-color: #3c8a3f;
+}
+
+.step:nth-child(5) .stepNumber {
+  background-color: #a9c0a9;
+}
+
+.stepText {
+  font-size: 24px;
+}
+
+.stepArrow {
+  font-size: 44px;
+  margin: 0 15px;
+  color: black;
+}
+
+
+.content {
+  display: flex;
+  gap: 30px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+
+.formSection {
+  flex: 1;
+  max-width: 550px;
+  padding: 20px;
+
+  border-radius: 8px;
+ 
+}
+
+
+.cartSection {
+  flex: 1;
+  max-width: 550px;
+  padding: 20px;
+  border-radius: 8px;
+  
+}
+
+
+.formTitle {
+  font-size: 24px;
+  margin-bottom: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.checkboxLabel input {
+  margin-right: 10px;
+}
+
+.mainForm{
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+}
+
+.formSection input[type="text"],
+.formSection textarea,
+.formSection select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+
+.formSection input[type="text"] {
+  height: 50px;
+}
+
+
+.formSection select {
+  appearance: none; 
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="%23333" d="M7 10l5 5 5-5z"/></svg>'); 
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  padding-right: 30px; 
+  cursor: pointer;
+}
+
+
+.formSection input:disabled,
+.formSection select:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+
+.formSection textarea {
+  height: 120px;
+  resize: none;
+}
+
+
+.formSection input[type="text"]:focus,
+.formSection select:focus {
+  border-color: #3c8a3f;
+  outline: none;
+}
+
+
+.cartTitle {
+  border-bottom: 1px solid black;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.cartItem {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  align-items: center;
+}
+
+.cartItemImage {
+  width: 60px;
+  height: 60px;
+  background-color: #f5f5f5;
+  margin-right: 15px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cartItemDetails {
+  color: #357e38;
+  flex: 1;
+}
+
+.cartItemPrice {
+  text-align: right;
+  width: 100px;
+  font-weight: bold;
+  color: #333;
+}
+
+.cartItemName {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.cartItemDesc {
+  font-size: 14px;
+}
+
+.cartSummary {
+  margin-top: 15px;
+  font-size: 14px;
+  border-bottom: solid 1px black;
+  padding-bottom: 10px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.summaryRow.total {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.summaryNote {
+  font-size: 12px;
+  color: #777;
+  margin-top: 5px;
+  margin-bottom: 12px;
+}
+.paymentMethodWrapper{
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.paymentTitle{
+  font-size: 24px;
+  font-weight: bold;
+}
+
+
+.paymentMethods {
+  margin-top: 20px;
+}
+
+.paymentMethod {
+  font-size: 18px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.paymentMethod input[type="radio"] {
+  margin-right: 10px;
+}
+
+.paymentDescription {
+  font-size: 12px;
+  color: #555;
+  margin-left: 25px;
+  margin-bottom: 15px;
+}
+
+
+.errorMessage {
+  color: red;
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+
+.submitBtn {
+  background-color: #3c8a3f;
+  color: white;
+  border: none;
+  padding: 12px;
+  width: 100%;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background-color 0.3s;
+}
+
+.submitBtn:hover {
+  background-color: #357e38;
+}
+
+
+.disclaimer {
+  font-size: 14px;
+  color: #777;
+  margin-top: 15px;
+  line-height: 1.4;
+}
+
+.popupOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.popupContent {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  min-width: 320px;
+  max-width: 90vw;
+}
+.addressItem {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+.selectAddressBtn {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .formSection,
+  .cartSection {
+    max-width: 100%;
+    padding: 15px;
+  }
+
+  .steps {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .stepText {
+    font-size: 18px;
+  }
+
+  .stepArrow {
+    font-size: 30px;
+  }
+
+  .formSection input[type="text"],
+  .formSection select,
+  .formSection textarea {
+    font-size: 13px;
+    padding: 10px;
+  }
+}
+.addressButton{
+  background-color: #357e38;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+  margin-bottom: 20px;
+}
+.popupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.popupContent {
+  background-color: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.popupContent h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #4a7c59;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.popupContent .activeTab {
+  background-color: #4a7c59;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.popupContent button:not(.activeTab) {
+  background-color: #dceadf;
+  color: #4a7c59;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.popupContent button:not(.activeTab):hover {
+  background-color: #c8e0cc;
+}
+
+.addressItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.addressItem div {
+  flex-grow: 1;
+}
+
+.addressItem button {
+  background-color: #357e38;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.addressItem button:hover {
+  background-color: #2c6a2d;
+}
+
+.popupContent input,
+.popupContent select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.sloseButton{
+  margin-top: 20px;
+}
+
+.popupContent button[type="button"] {
+  background-color: #357e38;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-right: 10px;
+  transition: background-color 0.3s;
+}
+
+.popupContent button[type="button"]:hover {
+  background-color: #2c6a2d;
+}
+
+.popupContent button[type="button"]:last-child {
+  background-color: #ccc;
+  color: #333;
+}
+
+.popupContent button[type="button"]:last-child:hover {
+  background-color: #bbb;
+}

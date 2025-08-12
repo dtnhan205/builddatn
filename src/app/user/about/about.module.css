@@ -1,0 +1,161 @@
+
+.main {
+    max-width: 1290px;
+    margin: 0 auto;
+    padding: 20px 10px;
+}
+.bannerTitle {
+    width: 100%;
+    position: relative;
+    text-align: center;
+}
+
+.bannerTitle img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    max-height: 800px;
+}
+
+.title {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #8D5524;
+    color: white;
+    text-align: center;
+    padding: 20px 0;
+}
+
+.title h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.main {
+    width: 1290px;
+}
+
+.brandMeaning {
+    text-align: justify;
+}
+
+.brandMeaning h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-top: 30px;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.brandMeaning p {
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+    line-height: 2;
+}
+
+.brandMeaning p strong {
+    color: #8D5524;
+    font-weight: bold;
+}
+
+.brandMeaning .brandImg {
+    display: block;
+    max-width: 100%;
+    margin: 40px auto;
+    border-radius: 10px;
+}
+
+.commitmentAction {
+   
+    margin: 60px auto;
+    text-align: justify;
+    line-height: 1.8;
+}
+
+.commitmentAction h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.commitmentAction p {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.commitmentAction .highlightText {
+    text-align: center;
+    font-size: 1.5rem;
+    color: #8D5524;
+    font-weight: bold;
+    margin-top: 40px;
+}
+
+.mission .missionImg {
+    display: block;
+    max-width: 100%;
+    border-radius: 10px;
+    margin: 40px auto;
+}
+
+.brandValue {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+
+.brandValueLeft {
+    flex: 1;
+    order: 1;
+}
+
+.brandValueRight {
+    flex: 1;
+    order: 2;
+}
+
+.brandValueBottom {
+    width: 100%;
+    order: 3;
+}
+
+.brandValue h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    font-weight: bold;
+    text-align: left;
+}
+
+.brandValue p {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.brandValue .brandImg {
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.textCenter {
+    text-align: center;
+}
+
+.textBold {
+    font-weight: bold;
+}
+
+
