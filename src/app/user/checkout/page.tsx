@@ -44,18 +44,16 @@ export default function CheckoutPage() {
   const [cities, setCities] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
-  const [cacheBuster, setCacheBuster] = useState(""); // Thêm cacheBuster
+  const [cacheBuster, setCacheBuster] = useState("");
 
   useEffect(() => {
     setCacheBuster(`t=${Date.now()}`);
   }, []);
 
-  // Set isClient to true
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Decode token to get userId
   useEffect(() => {
     if (!isClient) return;
 
@@ -92,7 +90,6 @@ export default function CheckoutPage() {
     }
   }, [isClient, router]);
 
-  // Fetch user info
   useEffect(() => {
     if (!isClient || !userId) return;
 
@@ -173,7 +170,6 @@ export default function CheckoutPage() {
       });
   }, [router, isClient, userId]);
 
-  // Fetch cities
   useEffect(() => {
     fetch("https://provinces.open-api.vn/api/?depth=1")
       .then((res) => res.json())
@@ -181,7 +177,6 @@ export default function CheckoutPage() {
       .catch((err) => toast.error("Lỗi khi tải danh sách tỉnh/thành: " + (err as Error).message));
   }, []);
 
-  // Fetch districts
   useEffect(() => {
     if (newAddress.cityOrProvince) {
       const selectedCity = cities.find((c) => c.name === newAddress.cityOrProvince);
@@ -197,7 +192,6 @@ export default function CheckoutPage() {
     setWards([]);
   }, [newAddress.cityOrProvince, cities]);
 
-  // Fetch wards
   useEffect(() => {
     if (newAddress.district) {
       const selectedDistrict = districts.find((d) => d.name === newAddress.district);
@@ -212,7 +206,6 @@ export default function CheckoutPage() {
     }
   }, [newAddress.district, districts]);
 
-  // Validate checkout data
   useEffect(() => {
     if (!isClient || hasCheckedOut) return;
     if (!checkoutData || !checkoutData.cart || !checkoutData.cart.items) {
@@ -281,7 +274,6 @@ export default function CheckoutPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Kiểm tra số điện thoại
     const phoneRegex = /^(03|05|07|08|09)[0-9]{8}$/;
     if (!phoneRegex.test(formData.sdt)) {
       toast.error("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam hợp lệ (bắt đầu bằng 03, 05, 07, 08, 09).");
@@ -289,7 +281,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Kiểm tra thông tin địa chỉ
     const { addressLine, ward, district, cityOrProvince } = formData;
     const isAddressLineValid = addressLine && addressLine.trim().length > 0;
     const isWardValid = ward && ward.trim().length > 0;
@@ -302,21 +293,18 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Kiểm tra phương thức thanh toán
     if (!formData.paymentMethod) {
       toast.error("Vui lòng chọn phương thức thanh toán.");
       setIsLoading(false);
       return;
     }
 
-    // Kiểm tra giỏ hàng
     if (!cart || !cart.items || cart.items.length === 0) {
       toast.error("Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi thanh toán.");
       setIsLoading(false);
       return;
     }
 
-    // Kiểm tra token
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Vui lòng đăng nhập để thanh toán");
@@ -324,14 +312,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Kiểm tra userId
     if (!userId || userId !== checkoutUserId) {
       toast.error("userId không hợp lệ hoặc không khớp.");
       setIsLoading(false);
       return;
     }
 
-    // Kiểm tra items
     for (const item of cart.items) {
       if (!item.product?._id) {
         toast.error("Một hoặc nhiều sản phẩm trong giỏ hàng không hợp lệ.");
@@ -438,7 +424,13 @@ export default function CheckoutPage() {
         localStorage.removeItem("checkoutData");
         setHasCheckedOut(true);
         toast.success("Đặt hàng thành công! Trạng thái vận chuyển: " + initialShippingStatus);
-        setTimeout(() => router.push("/user/"), 3000);
+        const today = new Date();
+        const formattedDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        setTimeout(() => {
+          router.push(
+            `/user/payment-done?orderId=${encodeURIComponent(orderId)}&date=${encodeURIComponent(formattedDate)}&total=${encodeURIComponent(total)}&paymentMethod=cod`
+          );
+        }, 2000);
       }
     } catch (err) {
       toast.error("Lỗi khi đặt hàng: " + (err as Error).message);
@@ -453,7 +445,7 @@ export default function CheckoutPage() {
       return "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
     }
     try {
-      new URL(image); // Validate URL
+      new URL(image);
       return image;
     } catch (e) {
       console.warn("Invalid URL format for image:", image, "using fallback:", "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg");
@@ -816,4 +808,4 @@ export default function CheckoutPage() {
       </div>
     </div>
   );
-} 
+}

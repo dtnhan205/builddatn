@@ -19,8 +19,9 @@ export default function PaymentOnline() {
   const searchParams = useSearchParams();
   const intervalRef = useRef(null);
 
-  const paymentCode = searchParams.get("paymentCode") || ""; // Lấy từ URL
-  const amount = parseFloat(searchParams.get("amount") || ""); // Mặc định là 299008 dựa trên Postman
+  const paymentCode = searchParams.get("paymentCode") || "";
+  const amount = parseFloat(searchParams.get("amount") || "");
+  const shippingStatus = searchParams.get("shippingStatus") || "pending";
 
   // Hàm format thời gian còn lại
   const formatTimeLeft = (ms) => {
@@ -48,7 +49,7 @@ export default function PaymentOnline() {
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("token"); // Lấy token từ localStorage
+      const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Vui lòng đăng nhập để tiếp tục");
       }
@@ -57,7 +58,7 @@ export default function PaymentOnline() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Thêm token vào header
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ paymentCode, amount }),
       });
@@ -77,13 +78,12 @@ export default function PaymentOnline() {
       }
 
       const result = await response.json();
-      console.log("Response from checkPaymentStatus:", result); // Debug log
+      console.log("Response from checkPaymentStatus:", result);
 
       if (result.status === "error" || !result.data) {
         throw new Error(result.message || "Không nhận được dữ liệu trạng thái");
       }
 
-      // Cập nhật thông tin từ phản hồi
       const paymentData = result.data || {};
       setMessage(
         paymentData.status === "success" && paymentData.paymentStatus === "completed"
@@ -99,7 +99,6 @@ export default function PaymentOnline() {
         orderId: paymentData.orderId,
       });
 
-      // Lưu vào localStorage
       const dataToSave = {
         status: paymentData.status,
         timestamp: new Date().getTime(),
@@ -107,13 +106,18 @@ export default function PaymentOnline() {
       localStorage.setItem(`payment_${paymentCode}`, JSON.stringify(dataToSave));
       localStorage.setItem(`amount_${paymentCode}`, amount.toString());
 
-      // Xử lý chuyển hướng khi hoàn tất
       if (paymentData.status === "success" && paymentData.paymentStatus === "completed") {
-        toast.success("Thanh toán thành công!"); // Hiển thị thông báo
+        toast.success("Thanh toán thành công!");
         localStorage.removeItem(`payment_${paymentCode}`);
         localStorage.removeItem(`amount_${paymentCode}`);
         if (intervalRef.current) clearInterval(intervalRef.current);
-        setTimeout(() => router.push("/user/"), 3000); // Chờ 3 giây trước khi chuyển hướng
+        const today = new Date();
+        const formattedDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        setTimeout(() => {
+          router.push(
+            `/payment-done?orderId=${encodeURIComponent(paymentData.orderId)}&date=${encodeURIComponent(formattedDate)}&total=${encodeURIComponent(amount)}&paymentMethod=bank`
+          );
+        }, 2000);
       } else if (paymentData.status === "expired") {
         toast.warn("Thanh toán đã hết hạn.");
         localStorage.removeItem(`payment_${paymentCode}`);
@@ -137,7 +141,6 @@ export default function PaymentOnline() {
     }
   }, [paymentCode, amount, router]);
 
-  // Kiểm tra trạng thái thanh toán ngay lập tức và sau đó mỗi 5 giây
   useEffect(() => {
     if (!paymentCode || !paymentCode.match(/^thanhtoan\d{5}$/)) {
       setError("Mã thanh toán không hợp lệ hoặc thiếu trong URL");
@@ -151,7 +154,7 @@ export default function PaymentOnline() {
       return;
     }
 
-    checkPaymentStatus(); // Kiểm tra ngay khi component mount
+    checkPaymentStatus();
 
     intervalRef.current = setInterval(checkPaymentStatus, 5000);
 
@@ -177,7 +180,6 @@ export default function PaymentOnline() {
     };
   }, [checkPaymentStatus, paymentCode, amount, router]);
 
-  // Xóa localStorage khi rời trang
   useEffect(() => {
     const handleUnload = () => {
       if (paymentCode) {
@@ -202,11 +204,12 @@ export default function PaymentOnline() {
             <p><span>Số tài khoản:</span> 0342031354</p>
             <p><span>Chủ tài khoản:</span> Đinh Thế Nhân</p>
             <p>
-              <span>Số tiền cần thanh toán:</span>{""}
+              <span>Số tiền cần thanh toán:</span>{" "}
               {isNaN(amount) ? "Không hợp lệ" : new Intl.NumberFormat("vi-VN").format(amount)} VND
             </p>
             <p><span>Nội dung chuyển khoản:</span> {paymentCode || "N/A"}</p>
             <p><span>Trạng thái:</span> {message}</p>
+            <p><span>Thời gian còn lại:</span> {formatTimeLeft(timeLeft)}</p>
             {order?.transactionId && (
               <>
                 <p><span>Mã giao dịch:</span> {order.transactionId}</p>
