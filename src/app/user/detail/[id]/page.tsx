@@ -18,11 +18,27 @@ const TOAST_DURATION = 3000;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png"];
 
-// Hàm tiện ích: Định dạng giá tiền
-const formatPrice = (price: number): string => {
-  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "đ";
-};
 
+const formatPrice = (price: number | string): string => {
+  // Loại bỏ tất cả ký tự không phải số, sau đó loại bỏ số 0 ở đầu nếu là chuỗi
+  const cleanedPrice = typeof price === "string"
+    ? price.replace(/[^\d]/g, "").replace(/^0+/, "") // Loại bỏ dấu chấm và ký tự không phải số, rồi loại bỏ số 0 ở đầu
+    : price.toString();
+  const numericPrice = parseFloat(cleanedPrice) || 0; // Chuyển thành số, mặc định 0 nếu không hợp lệ
+
+  // Đảm bảo giá trị là số hợp lệ
+  if (isNaN(numericPrice)) {
+    console.warn("Giá trị không hợp lệ, sử dụng 0 làm mặc định:", price);
+    return "0đ";
+  }
+
+  // Làm tròn số và định dạng với dấu chấm ngăn cách hàng nghìn
+  const formattedPrice = Math.round(numericPrice)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  return `${formattedPrice}đ`;
+};
 // Hàm tiện ích: Lấy URL hình ảnh
 const getImageUrl = (image: string): string => {
   if (!image || typeof image !== "string" || image.trim() === "") {
@@ -127,12 +143,31 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
     clearTimeout(timeoutId);
 
+    // Check Content-Type header
+    const contentType = response.headers.get("Content-Type") || "";
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      // Try to parse error as JSON, fallback to text if it fails
+      let errorData;
+      try {
+        if (contentType.includes("application/json")) {
+          errorData = await response.json();
+        } else {
+          errorData = { error: await response.text() };
+        }
+      } catch (e) {
+        errorData = { error: `Lỗi không xác định: ${await response.text()}` };
+      }
       throw new Error(errorData.error || `Lỗi HTTP: ${response.status} - ${response.statusText}`);
     }
 
-    return await response.json();
+    // Handle successful response
+    if (contentType.includes("application/json")) {
+      return await response.json();
+    } else {
+      // Handle non-JSON response (e.g., return text or throw error)
+      const text = await response.text();
+      throw new Error(`Unexpected response format: ${text}`);
+    }
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === "AbortError") {
@@ -263,33 +298,47 @@ export default function DetailPage() {
 
   // Lấy thông tin sản phẩm và danh sách yêu thích
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!identifier) {
-        setLoading(false);
-        setProduct(null);
-        showCartToast("error", "Identifier sản phẩm không hợp lệ!");
-        return;
-      }
+   const fetchProduct = async () => {
+  if (!identifier) {
+    setLoading(false);
+    setProduct(null);
+    showCartToast("error", "Identifier sản phẩm không hợp lệ!");
+    return;
+  }
 
-      try {
-        setLoading(true);
-        const data = await apiRequest(`/api/products/${identifier}`);
-        console.log("Fetched product data:", data);
-        setProduct(data);
-      } catch (error) {
-        console.error("Lỗi khi lấy sản phẩm:", error);
-        setProduct(null);
-        if (error instanceof Error && error.message.includes("400")) {
-          showCartToast("error", "Identifier không hợp lệ!");
-        } else if (error instanceof Error && error.message.includes("404")) {
-          showCartToast("error", "Không tìm thấy sản phẩm!");
-        } else {
-          showCartToast("error", "Lỗi khi lấy thông tin sản phẩm!");
-        }
-      } finally {
-        setLoading(false);
-      }
+  try {
+    setLoading(true);
+    const data = await apiRequest(`/api/products/${identifier}`);
+    console.log("Fetched product data:", data);
+
+    // Chuẩn hóa giá tiền trong option, loại bỏ định dạng không mong muốn
+    const normalizedProduct = {
+      ...data,
+      option: data.option.map((opt: any) => ({
+        ...opt,
+        price: typeof opt.price === "string"
+          ? parseFloat(opt.price.replace(/[^\d]/g, "").replace(/^0+/, "")) || 0
+          : opt.price,
+        discount_price: typeof opt.discount_price === "string"
+          ? parseFloat(opt.discount_price.replace(/[^\d]/g, "").replace(/^0+/, "")) || 0
+          : opt.discount_price,
+      })),
     };
+    setProduct(normalizedProduct);
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm:", error);
+    setProduct(null);
+    if (error instanceof Error && error.message.includes("400")) {
+      showCartToast("error", "Identifier không hợp lệ!");
+    } else if (error instanceof Error && error.message.includes("404")) {
+      showCartToast("error", "Không tìm thấy sản phẩm!");
+    } else {
+      showCartToast("error", "Lỗi khi lấy thông tin sản phẩm!");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
     const fetchFavoriteProducts = async () => {
       const token = localStorage.getItem("token");
