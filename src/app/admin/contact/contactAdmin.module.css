@@ -10,7 +10,7 @@
 .titleContainer {
   max-width: 1400px;
   padding: 2rem;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .titleContainer h1 {
@@ -22,7 +22,7 @@
 }
 
 .filterContainer {
-  display: flex;
+display: flex;
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px;
@@ -30,7 +30,6 @@
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   width: fit-content;
-  margin: 0 auto;
 }
 
 .searchInput {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
@@ -46,7 +45,7 @@ interface Order {
   items: { product: Product | null; optionId: string; quantity: number; images: string[] }[];
 }
 
-const API_BASE_URL = "http://localhost:10000";
+const API_BASE_URL = "https://api-zeal.onrender.com";
 const FALLBACK_IMAGE_URL = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
 
 const normalizeImageUrl = (url: string): string => {
@@ -59,7 +58,7 @@ const OrderPage: React.FC = () => {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState<{
     orderId: string;
     newStatus: string;
@@ -297,11 +296,21 @@ const OrderPage: React.FC = () => {
     if (type === "shipping") {
       const englishStatus =
         reverseShippingStatusMapping[newStatus as keyof typeof reverseShippingStatusMapping] || newStatus;
-      if (!statusProgression[currentStatus]?.includes(englishStatus)) {
+      if (englishStatus === "cancelled") {
+        // Redirect to cancel flow for "Hủy đơn hàng"
+        if (currentStatus !== "pending") {
+          showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý", "error");
+          return;
+        }
+        setShowConfirm({ orderId, newStatus, currentStatus, type: "cancel", cancelReason: "" });
+        setSelectedCancelReason("");
+        setCancelReasonInput("");
+      } else if (!statusProgression[currentStatus]?.includes(englishStatus)) {
         showNotification("Trạng thái không hợp lệ hoặc không thể chuyển về trạng thái trước đó", "error");
         return;
+      } else {
+        setShowConfirm({ orderId, newStatus, currentStatus, type });
       }
-      setShowConfirm({ orderId, newStatus, currentStatus, type });
     } else if (type === "return" && currentStatus !== "requested") {
       showNotification("Chỉ có thể thay đổi trạng thái hoàn hàng khi trạng thái là Đã yêu cầu", "error");
       return;
@@ -411,20 +420,31 @@ const OrderPage: React.FC = () => {
       );
       setCancelReasonInput("");
       setSelectedCancelReason("");
+      setSelectedOrderId(null); // Close details modal after successful update
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định";
-      showNotification(
-        `Không thể cập nhật trạng thái: ${errorMessage}`,
-        "error"
-      );
+      showNotification(`Không thể cập nhật trạng thái: ${errorMessage}`, "error");
     } finally {
       setShowConfirm(null);
       setLoading(false);
     }
   };
 
-  const handleToggleDetails = (orderId: string) => {
-    setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
+  const handleViewDetails = (orderId: string) => {
+    setSelectedOrderId(orderId);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedOrderId(null);
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      setSelectedOrderId(null);
+      setShowConfirm(null);
+      setCancelReasonInput("");
+      setSelectedCancelReason("");
+    }
   };
 
   const getProductPrice = (product: Product | null, optionId: string) => {
@@ -453,7 +473,7 @@ const OrderPage: React.FC = () => {
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      setExpandedOrderId(null);
+      setSelectedOrderId(null);
     }
   };
 
@@ -503,7 +523,6 @@ const OrderPage: React.FC = () => {
           onClick={() => {
             setLoading(true);
             setError(null);
-            // Trigger re-fetch
             const fetchOrders = async () => {
               try {
                 setLoading(true);
@@ -560,6 +579,8 @@ const OrderPage: React.FC = () => {
       </div>
     );
   }
+
+  const selectedOrder = orders.find((order) => order._id === selectedOrderId);
 
   return (
     <div className={styles.orderManagementContainer}>
@@ -632,216 +653,92 @@ const OrderPage: React.FC = () => {
               </tr>
             ) : (
               currentOrders.map((order, index) => (
-                <React.Fragment key={order._id}>
-                  <tr
-                    onClick={() => handleToggleDetails(order._id)}
-                    className={`${styles.orderRow} ${
-                      expandedOrderId === order._id ? styles.orderRowActive : ""
-                    }`}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td>{(currentPage - 1) * ordersPerPage + index + 1}</td>
-                    <td>{order.user?.username || "Không xác định"}</td>
-                    <td>{order.total.toLocaleString()}₫</td>
-                    <td>{formatDate(order.createdAt)}</td>
-                    <td>{getVietnamesePaymentStatus(order.paymentStatus)}</td>
-                    <td>
-                      <select
-                        value={getVietnameseShippingStatus(order.shippingStatus)}
-                        onChange={(e) =>
-                          handleStatusChange(order._id, e.target.value, order.shippingStatus, "shipping")
-                        }
-                        className={styles.categorySelect}
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={["returned", "cancelled"].includes(order.shippingStatus) || loading}
-                        aria-label={`Thay đổi trạng thái vận chuyển cho đơn hàng ${order._id}`}
-                      >
-                        {allStatuses
-                          .filter((status) => status.value !== "all")
-                          .map((status) => {
-                            const isValidStatus = order.shippingStatus && statusProgression[order.shippingStatus];
-                            return (
-                              <option
-                                key={status.value}
-                                value={status.label}
-                                disabled={
-                                  ["returned", "cancelled"].includes(order.shippingStatus) ||
-                                  (isValidStatus
-                                    ? !statusProgression[order.shippingStatus].includes(status.value) &&
-                                      status.value !== order.shippingStatus
-                                    : true)
-                                }
-                              >
-                                {status.label}
-                              </option>
-                            );
-                          })}
-                      </select>
-                    </td>
-                    <td>
-                      {order.returnStatus === "requested" ? (
-                        <select
-                          value={getVietnameseReturnStatus(order.returnStatus)}
-                          onChange={(e) =>
-                            handleStatusChange(order._id, e.target.value, order.returnStatus, "return")
-                          }
-                          className={styles.categorySelect}
-                          onClick={(e) => e.stopPropagation()}
-                          disabled={loading}
-                          aria-label={`Thay đổi trạng thái hoàn hàng cho đơn hàng ${order._id}`}
-                        >
-                          <option value={getVietnameseReturnStatus("requested")}>
-                            {getVietnameseReturnStatus("requested")}
-                          </option>
-                          {returnStatuses.map((status) => (
-                            <option key={status.value} value={status.label}>
+                <tr
+                  key={order._id}
+                  onClick={() => handleViewDetails(order._id)}
+                  className={styles.orderRow}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>{(currentPage - 1) * ordersPerPage + index + 1}</td>
+                  <td>{order.user?.username || "Không xác định"}</td>
+                  <td>{order.total.toLocaleString()}₫</td>
+                  <td>{formatDate(order.createdAt)}</td>
+                  <td>{getVietnamesePaymentStatus(order.paymentStatus)}</td>
+                  <td>
+                    <select
+                      value={getVietnameseShippingStatus(order.shippingStatus)}
+                      onChange={(e) =>
+                        handleStatusChange(order._id, e.target.value, order.shippingStatus, "shipping")
+                      }
+                      className={styles.categorySelect}
+                      onClick={(e) => e.stopPropagation()}
+                      disabled={loading}
+                      aria-label={`Thay đổi trạng thái vận chuyển cho đơn hàng ${order._id}`}
+                    >
+                      {allStatuses
+                        .filter((status) => status.value !== "all")
+                        .map((status) => {
+                          const isValidStatus = order.shippingStatus && statusProgression[order.shippingStatus];
+                          return (
+                            <option
+                              key={status.value}
+                              value={status.label}
+                              disabled={
+                                status.value === "cancelled"
+                                  ? order.shippingStatus !== "pending"
+                                  : ["returned", "cancelled"].includes(order.shippingStatus) ||
+                                    (isValidStatus
+                                      ? !statusProgression[order.shippingStatus].includes(status.value) &&
+                                        status.value !== order.shippingStatus
+                                      : true)
+                              }
+                            >
                               {status.label}
                             </option>
-                          ))}
-                        </select>
-                      ) : (
-                        getVietnameseReturnStatus(order.returnStatus)
-                      )}
-                    </td>
-                    <td>
-                      {order.paymentMethod === "cod"
-                        ? "Thanh toán khi nhận hàng"
-                        : order.paymentMethod === "bank"
-                        ? "Chuyển khoản"
-                        : order.paymentMethod || "Không xác định"}
-                    </td>
-                    <td>
-                      {order.shippingStatus === "pending" && (
-                        <button
-                          className={styles.cancelBtn}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(
-                              order._id,
-                              "Hủy đơn hàng",
-                              order.shippingStatus,
-                              "cancel"
-                            );
-                          }}
-                          disabled={loading}
-                          title="Hủy đơn hàng"
-                          aria-label={`Hủy đơn hàng ${order._id}`}
-                        >
-                          Hủy
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {expandedOrderId === order._id && (
-                    <tr className={styles.detailsRow}>
-                      <td colSpan={9}>
-                        <div className={styles.orderDetails}>
-                          <h3>Chi tiết đơn hàng</h3>
-                          <div className={styles.detailsContainer}>
-                            <div className={styles.detailsSection}>
-                              <h4>Thông tin khách hàng</h4>
-                              <div className={styles.detailsGrid}>
-                                <p>
-                                  <strong>Tên:</strong> {order.user?.username || "Không xác định"}
-                                </p>
-                                <p>
-                                  <strong>Email:</strong> {order.user?.email || "Không xác định"}
-                                </p>
-                                <p>
-                                  <strong>Địa chỉ:</strong> {formatAddress(order.address)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className={styles.detailsSection}>
-                              <h4>Thông tin đơn hàng</h4>
-                              <div className={styles.detailsGrid}>
-                                <p>
-                                  <strong>Ngày:</strong> {formatDate(order.createdAt)}
-                                </p>
-                                <p>
-                                  <strong>Trạng thái thanh toán:</strong>{" "}
-                                  {getVietnamesePaymentStatus(order.paymentStatus)}
-                                </p>
-                                <p>
-                                  <strong>Trạng thái vận chuyển:</strong>{" "}
-                                  {getVietnameseShippingStatus(order.shippingStatus)}
-                                </p>
-                                <p>
-                                  <strong>Trạng thái hoàn hàng:</strong>{" "}
-                                  {getVietnameseReturnStatus(order.returnStatus)}
-                                </p>
-                                {order.returnReason && (
-                                  <p>
-                                    <strong>Lý do hoàn hàng:</strong> {order.returnReason}
-                                  </p>
-                                )}
-                                {order.cancelReason && (
-                                  <p>
-                                    <strong>Lý do hủy đơn:</strong> {order.cancelReason}
-                                  </p>
-                                )}
-                                <p>
-                                  <strong>Phương thức thanh toán:</strong>{" "}
-                                  {order.paymentMethod === "cod"
-                                    ? "Thanh toán khi nhận hàng"
-                                    : order.paymentMethod === "bank"
-                                    ? "Chuyển khoản"
-                                    : order.paymentMethod || "Không xác định"}
-                                </p>
-                              </div>
-                            </div>
-                            <div className={styles.detailsSection}>
-                              <h4>Sản phẩm trong đơn hàng</h4>
-                              <table className={styles.itemsTable}>
-                                <thead>
-                                  <tr>
-                                    <th>Hình ảnh</th>
-                                    <th>Tên sản phẩm</th>
-                                    <th>Số lượng</th>
-                                    <th>Giá</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {order.items && order.items.length > 0 ? (
-                                    order.items.map((item, idx) => (
-                                      <tr key={idx}>
-                                        <td>
-                                          <img
-                                            src={getProductImage(item)}
-                                            alt={item.product?.name || "Không xác định"}
-                                            width={48}
-                                            height={48}
-                                            className={styles.orderTableImage}
-                                            onError={(e) => {
-                                              (e.target as HTMLImageElement).src = FALLBACK_IMAGE_URL;
-                                            }}
-                                          />
-                                        </td>
-                                        <td>{item.product?.name || "Không xác định"}</td>
-                                        <td>{item.quantity}</td>
-                                        <td>{getProductPrice(item.product, item.optionId).toLocaleString()}₫</td>
-                                      </tr>
-                                    ))
-                                  ) : (
-                                    <tr>
-                                      <td colSpan={4} className="text-center">
-                                        Không có sản phẩm trong đơn hàng
-                                      </td>
-                                    </tr>
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                            <div className={styles.detailsSection}>
-                              <h4>Tổng tiền</h4>
-                              <p>{order.total.toLocaleString()}₫</p>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                          );
+                        })}
+                    </select>
+                  </td>
+                  <td>
+                    {getVietnameseReturnStatus(order.returnStatus)}
+                    {order.returnReason && (
+                      <>
+                        <br />
+                        <span className={styles.returnReason}>
+                          (Lý do: {order.returnReason})
+                        </span>
+                      </>
+                    )}
+                  </td>
+                  <td>
+                    {order.paymentMethod === "cod"
+                      ? "Thanh toán khi nhận hàng"
+                      : order.paymentMethod === "bank"
+                      ? "Chuyển khoản"
+                      : order.paymentMethod || "Không xác định"}
+                  </td>
+                  <td>
+                    {order.shippingStatus === "pending" && (
+                      <button
+                        className={styles.cancelBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusChange(
+                            order._id,
+                            "Hủy đơn hàng",
+                            order.shippingStatus,
+                            "cancel"
+                          );
+                        }}
+                        disabled={loading}
+                        title="Hủy đơn hàng"
+                        aria-label={`Hủy đơn hàng ${order._id}`}
+                      >
+                        Hủy
+                      </button>
+                    )}
+                  </td>
+                </tr>
               ))
             )}
           </tbody>
@@ -908,7 +805,7 @@ const OrderPage: React.FC = () => {
         </div>
       )}
       {showConfirm && (
-        <div className={styles.modalOverlay}>
+        <div className={styles.modalOverlay} onClick={handleOverlayClick}>
           <div className={styles.modalContent}>
             <h2>
               {showConfirm.type === "cancel" ? "Xác nhận hủy đơn hàng" : "Xác nhận thay đổi trạng thái"}
@@ -937,7 +834,7 @@ const OrderPage: React.FC = () => {
                     placeholder="Nhập lý do hủy đơn"
                     value={cancelReasonInput}
                     onChange={(e) => setCancelReasonInput(e.target.value)}
-                    className={styles.cancelReasonInput}
+                    className={styles.searchInput}
                     style={{ marginTop: "10px" }}
                     aria-label="Nhập lý do hủy đơn hàng tùy chỉnh"
                   />
@@ -994,6 +891,161 @@ const OrderPage: React.FC = () => {
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {selectedOrder && (
+        
+        <div className={styles.modalOverlay} onClick={handleOverlayClick}>
+          
+          <div className={styles.modaldetail} style={{ maxHeight: "80vh", overflowY: "auto" }}>
+               <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
+              <button
+                className={styles.cancelBtn}
+                onClick={handleCloseDetails}
+                disabled={loading}
+                title="Đóng"
+                aria-label="Đóng chi tiết đơn hàng"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+            <h2>Chi tiết đơn hàng</h2>
+            <div className={styles.orderDetails}>
+              
+              <div className={styles.detailsContainer}>
+                <div className={styles.detailsSection}>
+                  <h4>Thông tin khách hàng</h4>
+                  <div className={styles.detailsGrid}>
+                    <p>
+                      <strong>Tên:</strong> {selectedOrder.user?.username || "Không xác định"}
+                    </p>
+                    <p>
+                      <strong>Email:</strong> {selectedOrder.user?.email || "Không xác định"}
+                    </p>
+                    <p>
+                      <strong>Địa chỉ:</strong> {formatAddress(selectedOrder.address)}
+                    </p>
+                  </div>
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Thông tin đơn hàng</h4>
+                  <div className={styles.detailsGrid}>
+                    <p>
+                      <strong>Ngày:</strong> {formatDate(selectedOrder.createdAt)}
+                    </p>
+                    <p>
+                      <strong>Trạng thái thanh toán:</strong>{" "}
+                      {getVietnamesePaymentStatus(selectedOrder.paymentStatus)}
+                    </p>
+                    <p>
+                      <strong>Trạng thái vận chuyển:</strong>{" "}
+                      {getVietnameseShippingStatus(selectedOrder.shippingStatus)}
+                    </p>
+                    <p>
+                      <strong>Phương thức thanh toán:</strong>{" "}
+                      {selectedOrder.paymentMethod === "cod"
+                        ? "Thanh toán khi nhận hàng"
+                        : selectedOrder.paymentMethod === "bank"
+                        ? "Chuyển khoản"
+                        : selectedOrder.paymentMethod || "Không xác định"}
+                    </p>
+                    {selectedOrder.cancelReason && (
+                      <p>
+                        <strong>Lý do hủy đơn:</strong> {selectedOrder.cancelReason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Trạng thái hoàn hàng</h4>
+                  <div className={styles.detailsGrid}>
+                    <p>
+                      <strong>Trạng thái:</strong>{" "}
+                      {getVietnameseReturnStatus(selectedOrder.returnStatus)}
+                    </p>
+                    {selectedOrder.returnReason && (
+                      <p>
+                        <strong>Lý do hoàn hàng:</strong> {selectedOrder.returnReason}
+                      </p>
+                    )}
+                    {selectedOrder.returnStatus === "requested" && (
+                      <div className={styles.returnAction}>
+                        <select
+                          value=""
+                          onChange={(e) =>
+                            handleStatusChange(
+                              selectedOrder._id,
+                              e.target.value,
+                              selectedOrder.returnStatus,
+                              "return"
+                            )
+                          }
+                          className={styles.categorySelect}
+                          aria-label={`Thay đổi trạng thái hoàn hàng cho đơn hàng ${selectedOrder._id}`}
+                        >
+                          <option value="" disabled>
+                            Chọn hành động
+                          </option>
+                          {returnStatuses.map((status) => (
+                            <option key={status.value} value={status.label}>
+                              {status.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Sản phẩm trong đơn hàng</h4>
+                  <table className={styles.itemsTable}>
+                    <thead>
+                      <tr>
+                        <th>Hình ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Số lượng</th>
+                        <th>Giá</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                        selectedOrder.items.map((item, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <img
+                                src={getProductImage(item)}
+                                alt={item.product?.name || "Không xác định"}
+                                width={48}
+                                height={48}
+                                className={styles.orderTableImage}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = FALLBACK_IMAGE_URL;
+                                }}
+                              />
+                            </td>
+                            <td>{item.product?.name || "Không xác định"}</td>
+                            <td>{item.quantity}</td>
+                            <td>{getProductPrice(item.product, item.optionId).toLocaleString()}₫</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="text-center">
+                            Không có sản phẩm trong đơn hàng
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Tổng tiền</h4>
+                  <p>{selectedOrder.total.toLocaleString()}₫</p>
+                </div>
+              </div>
+            </div>
+         
           </div>
         </div>
       )}

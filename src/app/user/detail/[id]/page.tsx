@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, Key } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "./Detail.module.css";
 import Image from "next/image";
@@ -12,33 +12,27 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api-zeal.o
 const ERROR_IMAGE_URL = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
 
 // Hằng số
-const TIMEOUT_DURATION = 10000;
+const DEFAULT_TIMEOUT_DURATION = 10000; // 10 giây cho các request thông thường
+const UPLOAD_TIMEOUT_DURATION = 120000; // 120 giây cho upload file lớn
 const MIN_COMMENT_LENGTH = 3;
 const TOAST_DURATION = 3000;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png"];
+const MAX_MEDIA_SIZE = 100 * 1024 * 1024; // 100MB to support videos
+const ALLOWED_MEDIA_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "video/mp4",
+  "video/mpeg",
+  "video/quicktime",
+  "video/webm"
+];
 
-
-const formatPrice = (price: number | string): string => {
-  // Loại bỏ tất cả ký tự không phải số, sau đó loại bỏ số 0 ở đầu nếu là chuỗi
-  const cleanedPrice = typeof price === "string"
-    ? price.replace(/[^\d]/g, "").replace(/^0+/, "") // Loại bỏ dấu chấm và ký tự không phải số, rồi loại bỏ số 0 ở đầu
-    : price.toString();
-  const numericPrice = parseFloat(cleanedPrice) || 0; // Chuyển thành số, mặc định 0 nếu không hợp lệ
-
-  // Đảm bảo giá trị là số hợp lệ
-  if (isNaN(numericPrice)) {
-    console.warn("Giá trị không hợp lệ, sử dụng 0 làm mặc định:", price);
+const formatPrice = (price: number | undefined | null): string => {
+  if (price === undefined || price === null || isNaN(price)) {
     return "0đ";
   }
-
-  // Làm tròn số và định dạng với dấu chấm ngăn cách hàng nghìn
-  const formattedPrice = Math.round(numericPrice)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-  return `${formattedPrice}đ`;
+  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "đ";
 };
+
 // Hàm tiện ích: Lấy URL hình ảnh
 const getImageUrl = (image: string): string => {
   if (!image || typeof image !== "string" || image.trim() === "") {
@@ -114,67 +108,76 @@ const useToast = () => {
   return { message, showToast, hideToast };
 };
 
-// Hàm API: Gửi yêu cầu đến API với xử lý timeout
+// Hàm API: Gửi yêu cầu đến API với xử lý timeout động
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  
   const url = `${API_BASE_URL}${endpoint}`;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const defaultHeaders: HeadersInit = {
-    "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 
+  const isFormData = options.body instanceof FormData;
   const config: RequestInit = {
     ...options,
     headers: {
       ...defaultHeaders,
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...options.headers,
     },
   };
 
+  const timeoutDuration = endpoint.includes("/comments") ? 300000 : DEFAULT_TIMEOUT_DURATION;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_DURATION);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
-  try {
-    const response = await fetch(url, {
-      ...config,
-      signal: controller.signal,
-    });
+  let attempt = 0;
+  const maxAttempts = 3;
 
-    clearTimeout(timeoutId);
+  while (attempt < maxAttempts) {
+    try {
+      const response = await fetch(url, { ...config, signal: controller.signal });
+      clearTimeout(timeoutId);
 
-    // Check Content-Type header
-    const contentType = response.headers.get("Content-Type") || "";
-    if (!response.ok) {
-      // Try to parse error as JSON, fallback to text if it fails
-      let errorData;
-      try {
-        if (contentType.includes("application/json")) {
+      if (!response.ok) {
+        let errorData;
+        try {
           errorData = await response.json();
-        } else {
+        } catch (e) {
           errorData = { error: await response.text() };
         }
-      } catch (e) {
-        errorData = { error: `Lỗi không xác định: ${await response.text()}` };
+        throw new Error(errorData.error || `Lỗi HTTP: ${response.status} - ${response.statusText}`);
       }
-      throw new Error(errorData.error || `Lỗi HTTP: ${response.status} - ${response.statusText}`);
-    }
 
-    // Handle successful response
-    if (contentType.includes("application/json")) {
-      return await response.json();
-    } else {
-      // Handle non-JSON response (e.g., return text or throw error)
-      const text = await response.text();
-      throw new Error(`Unexpected response format: ${text}`);
+      const contentType = response.headers.get("Content-Type") || "";
+      return contentType.includes("application/json") ? await response.json() : await response.text();
+    } catch (error) {
+      attempt++;
+      if (attempt === maxAttempts || !(error instanceof Error && error.name === "AbortError")) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // Retry sau 1s, 2s, 3s
     }
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Yêu cầu bị timeout");
-    }
-    throw error;
   }
+  throw new Error("Đã thử lại tối đa nhưng không thành công!");
+};
+
+const MediaModal = ({ src, type, onClose }: { src: string; type: 'image' | 'video'; onClose: () => void }) => {
+  console.log("Rendering MediaModal:", { src, type });
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        {type === 'image' ? (
+          <Image src={src} alt="Media preview" fill style={{ objectFit: 'contain' }} />
+        ) : (
+          <video src={src} controls autoPlay className={styles.modalVideo} />
+        )}
+        <button className={styles.closeButton} onClick={onClose}>×</button>
+      </div>
+    </div>
+  );
 };
 
 export default function DetailPage() {
@@ -198,61 +201,118 @@ export default function DetailPage() {
   const [isFavorite, setIsFavorite] = useState<boolean>(false);
   const [rating, setRating] = useState<number>(0);
   const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [videos, setVideos] = useState<File[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
   const [canReview, setCanReview] = useState<boolean>(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [adminReplyContent, setAdminReplyContent] = useState<string>(" Angelina");
-  const [showReplyForm, setShowReplyForm] = useState<string | null>(null); // Quản lý form trả lời
-  const [showAdminReply, setShowAdminReply] = useState<{ [key: string]: boolean }>({}); // Quản lý toggle adminReply
+  const [adminReplyContent, setAdminReplyContent] = useState<string>("");
+  const [showReplyForm, setShowReplyForm] = useState<string | null>(null);
+  const [showAdminReply, setShowAdminReply] = useState<{ [key: string]: boolean }>({});
+
+  // State cho modal preview media
+  const [modalMedia, setModalMedia] = useState<{ src: string; type: 'image' | 'video' } | null>(null);
 
   const { userId, username, role, loading: userLoading } = useUserInfo();
   const { message: cartMessage, showToast: showCartToast, hideToast: hideCartToast } = useToast();
   const { message: commentMessage, showToast: showCommentToast, hideToast: hideCommentToast } = useToast();
 
-  // Tạo cacheBuster sau khi hydration
   useEffect(() => {
     setCacheBuster(`t=${Date.now()}`);
   }, []);
 
-  // Đặt lại số lượng khi thay đổi tùy chọn
   useEffect(() => {
     setQuantity(1);
   }, [selectedOptionIndex]);
 
-  // Xử lý chọn hình ảnh
-  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  // Xử lý thay đổi media và tạo preview
+const handleMediaChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files) return;
 
-    const newImages: File[] = [];
-    const newPreviews: string[] = [];
+  const newImages: File[] = [];
+  const newVideos: File[] = [];
+  const newPreviews: string[] = [];
 
-    Array.from(files).forEach((file) => {
-      if (newImages.length >= 5) return;
-      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-        showCommentToast("error", "Chỉ hỗ trợ định dạng JPEG hoặc PNG!");
-        return;
-      }
-      if (file.size > MAX_IMAGE_SIZE) {
-        showCommentToast("error", "Hình ảnh không được vượt quá 5MB!");
-        return;
-      }
+  Array.from(files).forEach((file) => {
+    if (newImages.length + newVideos.length >= 5) {
+      showCommentToast("error", "Tối đa 5 tệp (hình ảnh hoặc video)!");
+      return;
+    }
+    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) {
+      showCommentToast("error", "Chỉ hỗ trợ định dạng JPEG, PNG, MP4, MPEG, MOV, hoặc WEBM!");
+      return;
+    }
+    if (file.size > MAX_MEDIA_SIZE) {
+      showCommentToast("error", `Tệp ${file.name} vượt quá 100MB! Vui lòng nén trước khi upload.`);
+      return;
+    }
+    if (file.type.startsWith("image/")) {
       newImages.push(file);
       newPreviews.push(URL.createObjectURL(file));
-    });
+    } else if (file.type.startsWith("video/")) {
+      newVideos.push(file);
+      // Tạo thumbnail nhanh hơn bằng cách giới hạn thời gian xử lý
+      const videoUrl = URL.createObjectURL(file);
+      const video = document.createElement("video");
+      video.src = videoUrl;
+      video.crossOrigin = "anonymous";
+      video.onloadedmetadata = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 100;
+        canvas.height = 100;
+        const context = canvas.getContext("2d");
+        video.currentTime = 0.1; // Lấy frame đầu tiên nhanh
+        video.onseeked = () => {
+          if (context) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const thumbnailUrl = canvas.toDataURL("image/jpeg");
+            newPreviews.push(thumbnailUrl);
+            setMediaPreviews([...mediaPreviews, ...newPreviews]);
+          }
+          URL.revokeObjectURL(videoUrl);
+        };
+        video.onerror = () => {
+          showCommentToast("error", `Lỗi khi xử lý video ${file.name}.`);
+          URL.revokeObjectURL(videoUrl);
+        };
+      };
+    }
+  });
 
-    setImages(newImages);
-    setImagePreviews(newPreviews);
-  }, [showCommentToast]);
+  setImages([...images, ...newImages]);
+  setVideos([...videos, ...newVideos]);
+  if (newVideos.length === 0) {
+    setMediaPreviews([...mediaPreviews, ...newPreviews]);
+  }
+}, [showCommentToast, images, videos, mediaPreviews]);
 
-  // Dọn dẹp URL preview khi component unmount hoặc hình ảnh thay đổi
+  // Xóa media khỏi danh sách preview
+  const removeMedia = useCallback((index: number) => {
+    // Xóa preview
+    const previewToRemove = mediaPreviews[index];
+    if (previewToRemove) {
+      URL.revokeObjectURL(previewToRemove);
+    }
+    
+    // Xóa khỏi images hoặc videos dựa trên index
+    const isImage = index < images.length;
+    if (isImage) {
+      setImages((prevImages) => prevImages.filter((_, i) => i !== index));
+    } else {
+      const videoIndex = index - images.length;
+      setVideos((prevVideos) => prevVideos.filter((_, i) => i !== videoIndex));
+    }
+
+    // Cập nhật mediaPreviews
+    setMediaPreviews((prevPreviews) => prevPreviews.filter((_, i) => i !== index));
+  }, [images, videos, mediaPreviews]);
+
   useEffect(() => {
     return () => {
-      imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+      mediaPreviews.forEach((preview) => URL.revokeObjectURL(preview));
     };
-  }, [imagePreviews]);
+  }, [mediaPreviews]);
 
-  // Kiểm tra điều kiện để hiển thị nút "VIẾT ĐÁNH GIÁ"
   useEffect(() => {
     const checkReviewEligibility = async () => {
       if (!userId || !product?._id || userLoading) {
@@ -296,86 +356,85 @@ export default function DetailPage() {
     checkReviewEligibility();
   }, [userId, product?._id, userLoading]);
 
-  // Lấy thông tin sản phẩm và danh sách yêu thích
-  useEffect(() => {
-   const fetchProduct = async () => {
-  if (!identifier) {
-    setLoading(false);
-    setProduct(null);
-    showCartToast("error", "Identifier sản phẩm không hợp lệ!");
-    return;
-  }
-
-  try {
-    setLoading(true);
-    const data = await apiRequest(`/api/products/${identifier}`);
-    console.log("Fetched product data:", data);
-
-    // Chuẩn hóa giá tiền trong option, loại bỏ định dạng không mong muốn
-    const normalizedProduct = {
-      ...data,
-      option: data.option.map((opt: any) => ({
-        ...opt,
-        price: typeof opt.price === "string"
-          ? parseFloat(opt.price.replace(/[^\d]/g, "").replace(/^0+/, "")) || 0
-          : opt.price,
-        discount_price: typeof opt.discount_price === "string"
-          ? parseFloat(opt.discount_price.replace(/[^\d]/g, "").replace(/^0+/, "")) || 0
-          : opt.discount_price,
-      })),
-    };
-    setProduct(normalizedProduct);
-  } catch (error) {
-    console.error("Lỗi khi lấy sản phẩm:", error);
-    setProduct(null);
-    if (error instanceof Error && error.message.includes("400")) {
-      showCartToast("error", "Identifier không hợp lệ!");
-    } else if (error instanceof Error && error.message.includes("404")) {
-      showCartToast("error", "Không tìm thấy sản phẩm!");
-    } else {
-      showCartToast("error", "Lỗi khi lấy thông tin sản phẩm!");
+useEffect(() => {
+  const fetchData = async () => {
+    if (!identifier) {
+      setLoading(false);
+      setProduct(null);
+      showCartToast("error", "Identifier sản phẩm không hợp lệ!");
+      return;
     }
-  } finally {
-    setLoading(false);
+
+    try {
+      setLoading(true);
+      const data = await apiRequest(`/api/products/${identifier}`);
+      console.log("Raw data from API:", data);
+      console.log("Raw price:", data.option[0]?.price);
+      console.log("Raw discount_price:", data.option[0]?.discount_price);
+      const normalizedProduct = {
+        ...data,
+        option: data.option.map((opt: any) => ({
+          ...opt,
+        })),
+      };
+      setProduct(normalizedProduct);
+
+      const fetchFavoriteProducts = async () => {
+        const token = localStorage.getItem("token");
+        if (token && normalizedProduct._id) {
+          try {
+            const data = await apiRequest("/api/users/favorite-products");
+            const productIds = data.favoriteProducts.map((item: any) => item._id);
+            setFavoriteProducts(productIds);
+            setIsFavorite(productIds.includes(normalizedProduct._id));
+            localStorage.setItem("favoriteProducts", JSON.stringify(productIds));
+          } catch (error) {
+            console.error("Lỗi khi lấy danh sách yêu thích:", error);
+            const savedFavorites = localStorage.getItem("favoriteProducts");
+            if (savedFavorites) {
+              const productIds = JSON.parse(savedFavorites);
+              setFavoriteProducts(productIds);
+              setIsFavorite(productIds.includes(normalizedProduct._id));
+            } else {
+              setFavoriteProducts([]);
+              setIsFavorite(false);
+            }
+          }
+        }
+      };
+      await fetchFavoriteProducts();
+
+      const fetchComments = async () => {
+        const data = await apiRequest(`/api/comments/product/${normalizedProduct._id}`);
+        setComments(Array.isArray(data) ? data : []);
+      };
+      await fetchComments();
+    } catch (error) {
+      console.error("Lỗi khi lấy sản phẩm:", error);
+      setProduct(null);
+      if (error instanceof Error && error.message.includes("400")) {
+        showCartToast("error", "Identifier không hợp lệ!");
+      } else if (error instanceof Error && error.message.includes("404")) {
+        showCartToast("error", "Không tìm thấy sản phẩm!");
+      } else {
+        showCartToast("error", "Lỗi khi lấy thông tin sản phẩm!");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [identifier, userId, userLoading, showCartToast]);
+
+const getProductPrice = (product: Product): number => {
+  if (product.option && product.option.length > 0) {
+    const opt = product.option[0];
+    return Number(opt.discount_price) || Number(opt.price) || 0;
   }
+  return 0;
 };
 
-    const fetchFavoriteProducts = async () => {
-      const token = localStorage.getItem("token");
-      if (!token || !product?._id) {
-        setFavoriteProducts([]);
-        setIsFavorite(false);
-        localStorage.removeItem("favoriteProducts");
-        return;
-      }
-
-      try {
-        const data = await apiRequest("/api/users/favorite-products");
-        const productIds = data.favoriteProducts.map((item: any) => item._id);
-        setFavoriteProducts(productIds);
-        setIsFavorite(productIds.includes(product._id));
-        localStorage.setItem("favoriteProducts", JSON.stringify(productIds));
-      } catch (error) {
-        console.error("Lỗi khi lấy danh sách yêu thích:", error);
-        const savedFavorites = localStorage.getItem("favoriteProducts");
-        if (savedFavorites) {
-          const productIds = JSON.parse(savedFavorites);
-          setFavoriteProducts(productIds);
-          setIsFavorite(productIds.includes(product._id));
-        } else {
-          setFavoriteProducts([]);
-          setIsFavorite(false);
-        }
-      }
-    };
-
-    fetchProduct();
-    if (product?._id) {
-      fetchFavoriteProducts();
-    }
-  }, [identifier, product?._id, showCartToast]);
-
-  // Lấy danh sách bình luận
   useEffect(() => {
     const fetchComments = async () => {
       if (!product?._id) {
@@ -394,13 +453,9 @@ export default function DetailPage() {
     fetchComments();
   }, [product?._id, showCommentToast]);
 
-  // Tăng số lượng sản phẩm
   const increaseQty = useCallback(() => setQuantity((prev) => prev + 1), []);
-
-  // Giảm số lượng sản phẩm
   const decreaseQty = useCallback(() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1)), []);
 
-  // Thêm sản phẩm vào giỏ hàng
   const addToCart = useCallback(async () => {
     if (!product || !product.option.length || !product.option[selectedOptionIndex]) return;
 
@@ -459,7 +514,6 @@ export default function DetailPage() {
     }
   }, [product, selectedOptionIndex, quantity, userId, showCartToast]);
 
-  // Thêm hoặc xóa sản phẩm khỏi danh sách yêu thích
   const addToWishlist = useCallback(async () => {
     if (!product?._id) return;
     const token = localStorage.getItem("token");
@@ -507,10 +561,13 @@ export default function DetailPage() {
     }
   }, [product?._id, isFavorite, favoriteProducts, showCartToast, router]);
 
-  // Gửi bình luận cho sản phẩm
   const submitComment = useCallback(async () => {
-    if (!product?._id || !newComment.trim() || newComment.length < MIN_COMMENT_LENGTH || rating === 0) {
-      showCommentToast("error", "Vui lòng nhập đánh giá và chọn số sao (ít nhất 1 sao)!");
+    if (!product?._id || !newComment.trim() || newComment.length < MIN_COMMENT_LENGTH) {
+      showCommentToast("error", "Vui lòng nhập đánh giá (ít nhất 3 ký tự)!");
+      return;
+    }
+    if (rating === 0) {
+      showCommentToast("error", "Vui lòng chọn số sao (ít nhất 1 sao)!");
       return;
     }
     if (userLoading) {
@@ -522,6 +579,10 @@ export default function DetailPage() {
       setTimeout(() => router.push("/user/login"), TOAST_DURATION);
       return;
     }
+    if (images.length + videos.length > 5) {
+      showCommentToast("error", "Tối đa 5 tệp (hình ảnh hoặc video)!");
+      return;
+    }
 
     setSubmittingComment(true);
     try {
@@ -530,39 +591,22 @@ export default function DetailPage() {
         throw new Error("Không thể đánh giá vì thương hiệu của sản phẩm đang bị ẩn!");
       }
 
-      const orders = await apiRequest(`/api/orders/user/${userId}`);
-      if (!Array.isArray(orders) || orders.length === 0) {
-        throw new Error("Bạn chưa có đơn hàng nào!");
-      }
-
-      const existingComments = await apiRequest(`/api/comments/product/${product._id}`);
-      const hasCommented = existingComments.some((comment: Comment) => comment.user?._id === userId);
-      if (hasCommented) {
-        throw new Error("Bạn đã đánh giá sản phẩm này!");
-      }
-
-      const eligibleOrder = orders.find((order: any) =>
-        order.paymentStatus === "completed" &&
-        order.shippingStatus === "delivered" &&
-        order.items.some((item: any) => item.product?._id === product._id)
-      );
-
-      if (!eligibleOrder) {
-        throw new Error("Bạn chỉ có thể đánh giá sản phẩm sau khi mua và nhận hàng thành công!");
-      }
-
       const formData = new FormData();
       formData.append("userId", userId);
       formData.append("productId", product._id);
       formData.append("content", newComment.trim());
       formData.append("rating", rating.toString());
       images.forEach((image) => formData.append("images", image));
+      videos.forEach((video) => formData.append("commentVideo", video));
 
-      await apiRequest("/api/comments", {
+      const response = await apiRequest("/api/comments", {
         method: "POST",
         body: formData,
-        headers: {}, // Không set Content-Type, để browser tự xử lý
       });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
       const updatedComments = await apiRequest(`/api/comments/product/${product._id}`);
       setComments(Array.isArray(updatedComments) ? updatedComments : []);
@@ -570,59 +614,97 @@ export default function DetailPage() {
       setNewComment("");
       setRating(0);
       setImages([]);
-      setImagePreviews([]);
+      setVideos([]);
+      setMediaPreviews([]);
       showCommentToast("success", "Đánh giá đã được gửi!");
       setCanReview(false);
     } catch (error) {
       console.error("Lỗi khi gửi bình luận:", error);
-      showCommentToast("error", error instanceof Error ? error.message : "Lỗi khi gửi đánh giá!");
+      const message = error instanceof Error ? error.message : "Lỗi khi gửi đánh giá!";
+      if (message.includes("Chỉ hỗ trợ định dạng")) {
+        showCommentToast("error", "Chỉ hỗ trợ định dạng JPEG, PNG, MP4, MPEG, MOV, hoặc WEBM!");
+      } else if (message.includes("fileSize")) {
+        showCommentToast("error", "Tệp vượt quá kích thước cho phép (100MB)!");
+      } else if (message.includes("files")) {
+        showCommentToast("error", "Số lượng tệp vượt quá giới hạn (5 tệp)!");
+      } else if (message.includes("500")) {
+        showCommentToast("error", "Lỗi server, vui lòng thử lại sau!");
+      } else if (message.includes("403")) {
+        showCommentToast("error", "Bạn không có quyền gửi đánh giá!");
+      } else if (message.includes("timeout")) {
+        showCommentToast("error", "Yêu cầu bị timeout, vui lòng thử lại với file nhỏ hơn!");
+      } else {
+        showCommentToast("error", message);
+      }
     } finally {
       setSubmittingComment(false);
     }
-  }, [product?._id, newComment, rating, userId, userLoading, images, showCommentToast, router]);
+  }, [product?._id, newComment, rating, userId, userLoading, images, videos, showCommentToast, router]);
 
-  const ratings: (number | "all")[] = ['all', 5, 4, 3, 2, 1]; // Khai báo kiểu rõ ràng
-
-
-  // Chỉnh sửa bình luận
   const editComment = useCallback(async (commentId: string) => {
-    if (!newComment.trim() || newComment.length < MIN_COMMENT_LENGTH || rating === 0) {
-      showCommentToast("error", "Vui lòng nhập nội dung và chọn số sao!");
+    if (!product?._id || !newComment.trim() || newComment.length < MIN_COMMENT_LENGTH) {
+      showCommentToast("error", "Vui lòng nhập đánh giá (ít nhất 3 ký tự)!");
+      return;
+    }
+    if (rating === 0) {
+      showCommentToast("error", "Vui lòng chọn số sao (ít nhất 1 sao)!");
+      return;
+    }
+    if (userLoading) {
+      showCommentToast("error", "Đang tải thông tin người dùng, vui lòng đợi!");
+      return;
+    }
+    if (!userId) {
+      showCommentToast("error", "Vui lòng đăng nhập để chỉnh sửa bình luận!");
+      setTimeout(() => router.push("/user/login"), TOAST_DURATION);
+      return;
+    }
+    if (images.length + videos.length > 5) {
+      showCommentToast("error", "Tối đa 5 tệp (hình ảnh hoặc video)!");
       return;
     }
 
     setSubmittingComment(true);
     try {
       const formData = new FormData();
-      formData.append("userId", userId!);
+      formData.append("userId", userId);
       formData.append("content", newComment.trim());
       formData.append("rating", rating.toString());
       images.forEach((image) => formData.append("images", image));
+      videos.forEach((video) => formData.append("commentVideo", video));
 
-      await apiRequest(`/api/comments/${commentId}`, {
+      const response = await apiRequest(`/api/comments/${commentId}`, {
         method: "PUT",
         body: formData,
-        headers: {}, // Không set Content-Type, để browser tự xử lý
       });
 
-      const updatedComments = await apiRequest(`/api/comments/product/${product?._id}`);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const updatedComments = await apiRequest(`/api/comments/product/${product._id}`);
       setComments(Array.isArray(updatedComments) ? updatedComments : []);
 
       setNewComment("");
       setRating(0);
       setImages([]);
-      setImagePreviews([]);
+      setVideos([]);
+      setMediaPreviews([]);
       setEditingCommentId(null);
-      showCommentToast("success", "Cập nhật bình luận thành công!");
+      showCommentToast("success", "Bình luận đã được cập nhật!");
     } catch (error) {
       console.error("Lỗi khi chỉnh sửa bình luận:", error);
-      showCommentToast("error", error instanceof Error ? error.message : "Lỗi khi chỉnh sửa bình luận!");
+      const message = error instanceof Error ? error.message : "Lỗi khi chỉnh sửa bình luận!";
+      if (message.includes("timeout")) {
+        showCommentToast("error", "Yêu cầu bị timeout, vui lòng thử lại với file nhỏ hơn!");
+      } else {
+        showCommentToast("error", message);
+      }
     } finally {
       setSubmittingComment(false);
     }
-  }, [newComment, rating, userId, product?._id, images, showCommentToast]);
+  }, [product?._id, newComment, rating, userId, userLoading, images, videos, showCommentToast, router]);
 
-  // Xóa bình luận
   const deleteComment = useCallback(async (commentId: string) => {
     if (!confirm("Bạn có chắc muốn xóa bình luận này?")) return;
 
@@ -635,7 +717,7 @@ export default function DetailPage() {
       const updatedComments = await apiRequest(`/api/comments/product/${product?._id}`);
       setComments(Array.isArray(updatedComments) ? updatedComments : []);
 
-      setCanReview(true); // Cho phép đánh giá lại sau khi xóa
+      setCanReview(true);
       showCommentToast("success", "Xóa bình luận thành công!");
     } catch (error) {
       console.error("Lỗi khi xóa bình luận:", error);
@@ -645,7 +727,6 @@ export default function DetailPage() {
     }
   }, [userId, product?._id, showCommentToast]);
 
-  // Gửi phản hồi admin
   const submitAdminReply = useCallback(async (commentId: string) => {
     if (!adminReplyContent.trim()) {
       showCommentToast("error", "Vui lòng nhập nội dung phản hồi!");
@@ -669,7 +750,7 @@ export default function DetailPage() {
       const updatedComments = await apiRequest(`/api/comments/product/${product?._id}`);
       setComments(Array.isArray(updatedComments) ? updatedComments : []);
       setAdminReplyContent("");
-      setShowReplyForm(null); // Ẩn form sau khi gửi
+      setShowReplyForm(null);
       showCommentToast("success", "Phản hồi đã được gửi!");
     } catch (error) {
       console.error("Lỗi khi gửi phản hồi admin:", error);
@@ -679,13 +760,11 @@ export default function DetailPage() {
     }
   }, [adminReplyContent, product?._id, userId, role, showCommentToast]);
 
-  // Toggle hiển thị form trả lời
   const toggleReplyForm = useCallback((commentId: string) => {
     setShowReplyForm((prev) => (prev === commentId ? null : commentId));
-    setAdminReplyContent(""); // Reset nội dung khi mở/đóng form
+    setAdminReplyContent("");
   }, []);
 
-  // Toggle hiển thị phản hồi admin
   const toggleAdminReply = useCallback((commentId: string) => {
     setShowAdminReply((prev) => ({
       ...prev,
@@ -712,30 +791,66 @@ export default function DetailPage() {
       .filter((comment) => filterRating === "all" || comment.rating === filterRating);
   }, [comments, filterRating]);
 
-  // Logic cuộn khi load trang với hash
-  useEffect(() => {
-    if (window.location.hash === "#writeReviewForm") {
-      const form = document.getElementById("writeReviewForm");
-      if (form) {
-        form.classList.add(styles.active);
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }
-  }, []);
-
-  // Hàm bắt đầu chỉnh sửa bình luận
   const startEditingComment = (comment: Comment) => {
     setEditingCommentId(comment._id);
     setNewComment(comment.content);
     setRating(comment.rating || 0);
     setImages([]);
-    setImagePreviews(comment.images?.map((img: string) => getImageUrl(img)) || []);
+    setVideos([]);
+    // Tạo mediaPreviews từ images và videos (lấy url từ đối tượng)
+    const imagePreviews = (comment.images || []).map((img: { url: string }) => getImageUrl(img.url));
+    const videoPreviews: string[] = [];
+    
+    (comment.videos || []).forEach((vid: { url: string }, index: string | number) => {
+      const videoUrl = getImageUrl(vid.url);
+      const video = document.createElement("video");
+      video.src = videoUrl;
+      video.crossOrigin = "anonymous"; // Nếu cần xử lý CORS
+      video.onloadedmetadata = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 100; // Độ rộng thumbnail
+        canvas.height = 100; // Độ cao thumbnail
+        const context = canvas.getContext("2d");
+        video.currentTime = 0.1; // Lấy frame đầu tiên
+        video.onseeked = () => {
+          if (context) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const thumbnailUrl = canvas.toDataURL("image/jpeg");
+            videoPreviews[Number(index)] = thumbnailUrl;
+            setMediaPreviews([...imagePreviews, ...videoPreviews]); // Cập nhật state
+          }
+          URL.revokeObjectURL(videoUrl); // Giải phóng bộ nhớ
+        };
+      };
+    });
+
+    // Nếu không có video hoặc video chưa tải xong, chỉ dùng imagePreviews tạm thời
+    if (comment.videos?.length === 0) {
+      setMediaPreviews(imagePreviews);
+    } else {
+      setMediaPreviews([...imagePreviews, ...videoPreviews]); // Cập nhật ban đầu
+    }
+
     const form = document.getElementById("writeReviewForm");
     if (form) {
       form.classList.add(styles.active);
       form.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
+
+  const openReviewForm = useCallback(() => {
+    setEditingCommentId(null);
+    setNewComment("");
+    setRating(0);
+    setImages([]);
+    setVideos([]);
+    setMediaPreviews([]);
+    const form = document.getElementById("writeReviewForm");
+    if (form) {
+      form.classList.add(styles.active);
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   if (loading) return <p className="text-center py-10">Đang tải chi tiết sản phẩm...</p>;
   if (!product) return <p className="text-center py-10">Không tìm thấy sản phẩm.</p>;
@@ -803,26 +918,28 @@ export default function DetailPage() {
           <div className={styles['product-info']}>
             <h1 className={styles['product-title']}>{product.name}</h1>
 
-            {selectedOption && (
-              <p className={styles['product-price']}>
-                {selectedOption.discount_price && (
-                  <>
-                    <span className={styles['discount-price']}>
-                      {formatPrice(selectedOption.discount_price)}
-                    </span>
-                    <span className={styles['original-price']}>
-                      {formatPrice(selectedOption.price)}
-                    </span>
-                    <span className={styles['discount-percent']}>
-                      {`-${Math.round(
-                        ((selectedOption.price - selectedOption.discount_price) / selectedOption.price) * 100
-                      )}%`}
-                    </span>
-                  </>
-                )}
-                {!selectedOption.discount_price && <>{formatPrice(selectedOption.price)}</>}
-              </p>
-            )}
+         {selectedOption && (
+        <p className={styles['product-price']}>
+          {(selectedOption.discount_price ?? 0) > 0 && (selectedOption.discount_price ?? 0) < (selectedOption.price ?? 0) && (
+            <>
+              <span className={styles['discount-price']}>
+                {formatPrice(selectedOption.discount_price)}
+              </span>
+              <span className={styles['original-price']}>
+                {formatPrice(selectedOption.price)}
+              </span>
+              <span className={styles['discount-percent']}>
+                {`-${Math.round((((selectedOption.price ?? 0) - (selectedOption.discount_price ?? 0)) / (selectedOption.price ?? 1)) * 100)}%`}
+              </span>
+            </>
+          )}
+          {((selectedOption.discount_price ?? 0) === 0 || !selectedOption.discount_price) && (
+            <>
+              {formatPrice(selectedOption.price)}
+            </>
+          )}
+        </p>
+      )}
 
             {product.option.length > 0 && (
               <div style={{ margin: "16px 0" }}>
@@ -903,14 +1020,6 @@ export default function DetailPage() {
                 </span>
               </button>
             </div>
-
-            {cartMessage && (
-              <ToastNotification
-                message={cartMessage.text}
-                type={cartMessage.type}
-                onClose={hideCartToast}
-              />
-            )}
           </div>
         </section>
 
@@ -964,38 +1073,26 @@ export default function DetailPage() {
             </div>
           </div>
 
-
-        <div className={styles['filter-section']}>
-          <span className={styles['filter-label']}>Lọc đánh giá:</span>
-          {ratings.map((rating) => (
-            <button
-              key={rating}
-              className={`${styles['filter-button']} ${
-                filterRating === rating ? styles.active : ''
-              }`}
-              onClick={() => setFilterRating(rating)}
-            >
-              {rating === 'all' ? 'Tất cả' : `${rating} ★`}
-            </button>
-          ))}
-        </div>
+          <div className={styles['filter-section']}>
+            <span className={styles['filter-label']}>Lọc đánh giá:</span>
+            {(['all', 5, 4, 3, 2, 1] as const).map((rating) => (
+              <button
+                key={rating}
+                className={`${styles['filter-button']} ${
+                  filterRating === rating ? styles.active : ''
+                }`}
+                onClick={() => setFilterRating(rating)}
+              >
+                {rating === 'all' ? 'Tất cả' : `${rating} ★`}
+              </button>
+            ))}
+          </div>
 
           <div className={styles['write-review-container']}>
             {canReview && (
               <button
                 className={styles['write-review']}
-                onClick={() => {
-                  setEditingCommentId(null);
-                  setNewComment('');
-                  setRating(0);
-                  setImages([]);
-                  setImagePreviews([]);
-                  const form = document.getElementById('writeReviewForm');
-                  if (form) {
-                    form.classList.add(styles.active);
-                    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }}
+                onClick={openReviewForm}
               >
                 <span>✏️</span>
                 VIẾT ĐÁNH GIÁ
@@ -1040,40 +1137,61 @@ export default function DetailPage() {
               maxLength={500}
               disabled={submittingComment}
             />
-            <div className={styles['image-upload']}>
-              <label htmlFor="image-upload" className={styles['image-upload-label']}>
-                Tải lên hình ảnh (tối đa 5, JPEG/PNG, &lt;5MB):
+            <div className={styles['media-upload']}>
+              <label htmlFor="media-upload" className={styles['media-upload-label']}>
+                Tải lên hình ảnh hoặc video (tối đa 5):
               </label>
               <input
-                id="image-upload"
+                id="media-upload"
                 type="file"
-                accept="image/jpeg,image/png"
+                accept="image/jpeg,image/png,video/mp4,video/mpeg,video/quicktime,video/webm"
                 multiple
-                onChange={handleImageChange}
+                onChange={handleMediaChange}
                 disabled={submittingComment}
-                className={styles['image-upload-input']}
+                className={styles['media-upload-input']}
               />
-              {imagePreviews.length > 0 && (
-                <div className={styles['image-preview-container']}>
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className={styles['image-preview']}>
-                      <Image
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        width={100}
-                        height={100}
-                        className={styles['preview-img']}
-                      />
-                      <button
-                        className={styles['remove-image']}
-                        onClick={() => {
-                          setImages((prev) => prev.filter((_, i) => i !== index));
-                          setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-                        }}
-                        disabled={submittingComment}
-                      >
-                        X
-                      </button>
+              {mediaPreviews.length > 0 && (
+                <div className={styles['media-preview-container']}>
+                  {mediaPreviews.map((preview, index) => (
+                    <div key={index} className={styles['media-preview']}>
+                      <div className={styles['media-preview-wrapper']}>
+                        {images[index]?.type.startsWith("image/") || (!videos[index] && preview) ? (
+                          <Image
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            width={100}
+                            height={100}
+                            className={styles['preview-img']}
+                            onClick={() => {
+                              const isVideo = videos[index]?.type.startsWith("video/") || (filteredComments[index]?.videos && filteredComments[index].videos[index]?.url);
+                              setModalMedia({ 
+                                src: isVideo ? (videos[index] ? URL.createObjectURL(videos[index]) : getImageUrl(filteredComments[index]?.videos?.[0]?.url || "")) : preview, 
+                                type: isVideo ? 'video' : 'image' 
+                              });
+                            }}
+                          />
+                        ) : (
+                          <video
+                            src={preview} // Sử dụng thumbnail làm preview
+                            width={100}
+                            height={100}
+                            className={styles['preview-video']}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              const videoSrc = videos[index] ? URL.createObjectURL(videos[index]) : getImageUrl(filteredComments[index]?.videos?.[0]?.url || "");
+                              setModalMedia({ src: videoSrc, type: 'video' });
+                            }}
+                          />
+                        )}
+                        <button
+                          className={styles['remove-media-button']}
+                          onClick={() => removeMedia(index)}
+                          disabled={submittingComment}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1104,7 +1222,8 @@ export default function DetailPage() {
                   setNewComment('');
                   setRating(0);
                   setImages([]);
-                  setImagePreviews([]);
+                  setVideos([]);
+                  setMediaPreviews([]);
                   setEditingCommentId(null);
                 }}
                 disabled={submittingComment}
@@ -1158,19 +1277,36 @@ export default function DetailPage() {
                     Ngày: {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
                   </time>
                   <p className={styles.comment}>{comment.content}</p>
-                  {comment.images && comment.images.length > 0 && (
-                    <div className={styles['comment-images']}>
-                      {comment.images.map((image: string, imgIndex: number) => (
+                  {(comment.images?.length > 0 || comment.videos?.length > 0) && (
+                    <div className={styles['comment-media']}>
+                      {comment.images?.map((image: { url: string }, imgIndex: number) => (
                         <Image
                           key={`comment-img-${imgIndex}`}
-                          src={`${getImageUrl(image)}?${cacheBuster}`}
+                          src={`${getImageUrl(image.url)}?${cacheBuster}`}
                           alt={`Comment image ${imgIndex + 1}`}
                           width={100}
                           height={100}
                           className={styles['comment-img']}
+                          onClick={() => setModalMedia({ src: getImageUrl(image.url), type: 'image' })}
                           onError={(e) => {
                             console.log(`Comment image ${imgIndex + 1} load failed, switched to 404 fallback`);
                             (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
+                          }}
+                        />
+                      ))}
+                      {comment.videos?.map((video: { url: string }, vidIndex: number) => (
+                        <video
+                          key={`comment-video-${vidIndex}`}
+                          src={`${getImageUrl(video.url)}?${cacheBuster}`}
+                          width={100}
+                          height={100}
+                          controls
+                          className={styles['comment-video']}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            console.log("Clicking comment video:", getImageUrl(video.url));
+                            setModalMedia({ src: getImageUrl(video.url), type: 'video' });
                           }}
                         />
                       ))}
@@ -1269,6 +1405,14 @@ export default function DetailPage() {
           message={commentMessage.text}
           type={commentMessage.type}
           onClose={hideCommentToast}
+        />
+      )}
+
+      {modalMedia && (
+        <MediaModal
+          src={modalMedia.src}
+          type={modalMedia.type}
+          onClose={() => setModalMedia(null)}
         />
       )}
     </>

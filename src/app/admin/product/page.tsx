@@ -8,9 +8,8 @@ import Head from "next/head";
 import React from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faEye, faEyeSlash, faPlus, faCheck, faTimes, faRedo } from '@fortawesome/free-solid-svg-icons';
-import ToastNotification from "../../user/ToastNotification/ToastNotification"; // Thay thế import
+import ToastNotification from "../../user/ToastNotification/ToastNotification";
 
-// Định nghĩa các giao diện TypeScript
 interface Option {
   _id: string;
   value: string;
@@ -60,11 +59,11 @@ export default function ProductPage() {
   const [isTogglingStatus, setIsTogglingStatus] = useState<boolean>(false);
   const [toggleSlug, setToggleSlug] = useState<string | null>(null);
   const [toggleMessage, setToggleMessage] = useState<string>("");
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null); // Thêm state cho notification
+  const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const productsPerPage = 9;
 
   const router = useRouter();
@@ -74,7 +73,6 @@ export default function ProductPage() {
     return `https://api-zeal.onrender.com${path.startsWith("/") ? "" : "/"}${path}`;
   };
 
-  // Kiểm tra quyền admin
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -84,12 +82,10 @@ export default function ProductPage() {
     }
   }, [router]);
 
-  // Hàm hiển thị thông báo
   const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ message, type });
   };
 
-  // Lấy dữ liệu danh mục từ API
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -143,7 +139,6 @@ export default function ProductPage() {
     }
   };
 
-  // Lấy dữ liệu thương hiệu từ API
   const fetchBrands = async () => {
     try {
       setLoading(true);
@@ -191,7 +186,6 @@ export default function ProductPage() {
     }
   };
 
-  // Lấy dữ liệu sản phẩm từ API
   const fetchProducts = async (loadedCategories: Category[]) => {
     try {
       setLoading(true);
@@ -277,7 +271,6 @@ export default function ProductPage() {
     }
   };
 
-  // Đồng bộ hóa việc tải dữ liệu
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -304,7 +297,6 @@ export default function ProductPage() {
     fetchData();
   }, []);
 
-  // Xử lý tìm kiếm và lọc theo danh mục và trạng thái
   useEffect(() => {
     const filtered = products.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -316,7 +308,6 @@ export default function ProductPage() {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedStatus, products]);
 
-  // Xử lý thay đổi trạng thái sản phẩm
   const confirmToggleStatus = (slug: string) => {
     const product = products.find((p) => p.slug === slug);
     if (product) {
@@ -390,12 +381,20 @@ export default function ProductPage() {
     }
   };
 
-  // Hàm xử lý nhấp để mở rộng/thu gọn chi tiết sản phẩm
-  const handleToggleDetails = (productId: string) => {
-    setExpandedProductId(expandedProductId === productId ? null : productId);
+  const handleViewDetails = (product: Product) => {
+    setSelectedProduct(product);
   };
 
-  // Phân trang
+  const closePopup = () => {
+    setSelectedProduct(null);
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      closePopup();
+    }
+  };
+
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -404,7 +403,7 @@ export default function ProductPage() {
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      setExpandedProductId(null);
+      setSelectedProduct(null);
     }
   };
 
@@ -525,140 +524,55 @@ export default function ProductPage() {
           <tbody>
             {currentProducts.length > 0 ? (
               currentProducts.map((product) => (
-                <React.Fragment key={product._id}>
-                  <tr
-                    onClick={() => handleToggleDetails(product._id)}
-                    className={`${styles.productRow} ${expandedProductId === product._id ? styles.productRowActive : ""}`}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td>
-                      <img
-                        src={normalizeImageUrl(product.images[0])}
-                        alt={product.name}
-                        width={50}
-                        height={50}
-                        className={styles.productTableImage}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
-                        }}
-                      />
-                    </td>
-                    <td>{product.name}</td>
-                    <td>{categories.find((cat) => cat._id === product.id_category)?.name || "Chưa phân loại"}</td>
-                    <td>{brands.find((brand) => brand._id === product.id_brand)?.name || "Chưa phân loại"}</td>
-                    <td>{product.active ? "Có" : "Không"}</td>
-                    <td>{product.status === "show" ? "Hiển thị" : "Ẩn"}</td>
-                    <td className={styles.actionButtons}>
-                      <button
-                        className={styles.editBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/admin/edit_product/${product.slug}`);
-                        }}
-                        disabled={loading}
-                        title="Sửa sản phẩm"
-                      >
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button
-                        className={styles.toggleStatusBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          confirmToggleStatus(product.slug);
-                        }}
-                        disabled={loading}
-                        title={product.status === "show" ? "Ẩn sản phẩm" : "Hiển thị sản phẩm"}
-                      >
-                        <FontAwesomeIcon icon={product.status === "show" ? faEyeSlash : faEye} />
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedProductId === product._id && (
-                    <tr className={styles.detailsRow}>
-                      <td colSpan={7}>
-                        <div className={styles.productDetails}>
-                          <h3>Chi tiết sản phẩm</h3>
-                          <div className={styles.detailsContainer}>
-                            <div className={styles.detailsSection}>
-                              <h4>Thông tin cơ bản</h4>
-                              <div className={styles.detailsGrid}>
-                                <p><strong>Tên sản phẩm:</strong> {product.name}</p>
-                                <p><strong>Slug:</strong> {product.slug}</p>
-                                <p><strong>Danh mục:</strong> {categories.find((cat) => cat._id === product.id_category)?.name || "Chưa phân loại"}</p>
-                                <p><strong>Thương hiệu:</strong> {brands.find((brand) => brand._id === product.id_brand)?.name || "Chưa phân loại"}</p>
-                                <p><strong>Kích hoạt:</strong> {product.active ? "Có" : "Không"}</p>
-                                <p><strong>Trạng thái:</strong> {product.status === "show" ? "Hiển thị" : "Ẩn"}</p>
-                                <p><strong>Lượt xem:</strong> {product.view}</p>
-                                <p><strong>Ngày tạo:</strong> {new Date(product.createdAt).toLocaleString()}</p>
-                                <p><strong>Ngày cập nhật:</strong> {new Date(product.updatedAt).toLocaleString()}</p>
-                              </div>
-                            </div>
-                            <div className={styles.detailsSection}>
-                              <h4>Mô tả sản phẩm</h4>
-                              <p><strong>Mô tả ngắn:</strong> {product.short_description}</p>
-                              <br />
-                              <p><strong>Mô tả chi tiết:</strong></p>
-                              <div className={styles.descriptionContent} dangerouslySetInnerHTML={{ __html: product.description }} />
-                            </div>
-                            <div className={styles.detailsSection}>
-                              <h4>Tùy chọn sản phẩm</h4>
-                              <table className={styles.optionsTable}>
-                                <thead>
-                                  <tr>
-                                    <th>Kích thước</th>
-                                    <th>Giá</th>
-                                    <th>Giá khuyến mãi</th>
-                                    <th>Tồn kho</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {product.option.length > 0 ? (
-                                    product.option.map((opt, index) => (
-                                      <tr key={index}>
-                                        <td>{opt.value}</td>
-                                        <td>{opt.price.toLocaleString()}₫</td>
-                                        <td>{opt.discount_price ? opt.discount_price.toLocaleString() + "₫" : "Không có"}</td>
-                                        <td>{opt.stock}</td>
-                                      </tr>
-                                    ))
-                                  ) : (
-                                    <tr>
-                                      <td colSpan={4} className="text-center">Không có tùy chọn nào</td>
-                                    </tr>
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                            <div className={styles.detailsSection}>
-                              <h4>Hình ảnh sản phẩm</h4>
-                              <div className={styles.imageGallery}>
-                                {product.images.length > 0 ? (
-                                  product.images.map((img, index) => (
-                                    <img
-                                      key={index}
-                                      src={normalizeImageUrl(img)}
-                                      alt={`${product.name} hình ${index + 1}`}
-                                      width={120}
-                                      height={120}
-                                      className={styles.detailImage}
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src =
-                                          "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
-                                      }}
-                                    />
-                                  ))
-                                ) : (
-                                  <p>Không có hình ảnh</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                <tr 
+                  key={product._id} 
+                  className={styles.productRow} 
+                  onClick={() => handleViewDetails(product)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>
+                    <img
+                      src={normalizeImageUrl(product.images[0])}
+                      alt={product.name}
+                      width={50}
+                      height={50}
+                      className={styles.productTableImage}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+                      }}
+                    />
+                  </td>
+                  <td>{product.name}</td>
+                  <td>{categories.find((cat) => cat._id === product.id_category)?.name || "Chưa phân loại"}</td>
+                  <td>{brands.find((brand) => brand._id === product.id_brand)?.name || "Chưa phân loại"}</td>
+                  <td>{product.active ? "Có" : "Không"}</td>
+                  <td>{product.status === "show" ? "Hiển thị" : "Ẩn"}</td>
+                  <td className={styles.actionButtons}>
+                    <button
+                      className={styles.editBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/admin/edit_product/${product.slug}`);
+                      }}
+                      disabled={loading}
+                      title="Sửa sản phẩm"
+                    >
+                      <FontAwesomeIcon icon={faEdit} />
+                    </button>
+                    <button
+                      className={styles.toggleStatusBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        confirmToggleStatus(product.slug);
+                      }}
+                      disabled={loading}
+                      title={product.status === "show" ? "Ẩn sản phẩm" : "Hiển thị sản phẩm"}
+                    >
+                      <FontAwesomeIcon icon={product.status === "show" ? faEyeSlash : faEye} />
+                    </button>
+                  </td>
+                </tr>
               ))
             ) : (
               <tr>
@@ -671,6 +585,93 @@ export default function ProductPage() {
           </tbody>
         </table>
       </div>
+      {selectedProduct && (
+        <div className={styles.modalOverlay} onClick={handleOverlayClick}>
+          <div className={styles.modalContent}>
+            <div className={styles.productDetails}>
+              <h3>Chi tiết sản phẩm</h3>
+              <button className={styles.closeBtn} onClick={closePopup} title="Đóng">
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+              <div className={styles.detailsContainer}>
+                <div className={styles.detailsSection}>
+                  <h4>Thông tin cơ bản</h4>
+                  <div className={styles.detailsGrid}>
+                    <p><strong>Tên sản phẩm:</strong> {selectedProduct.name}</p>
+                    <p><strong>Slug:</strong> {selectedProduct.slug}</p>
+                    <p><strong>Danh mục:</strong> {categories.find((cat) => cat._id === selectedProduct.id_category)?.name || "Chưa phân loại"}</p>
+                    <p><strong>Thương hiệu:</strong> {brands.find((brand) => brand._id === selectedProduct.id_brand)?.name || "Chưa phân loại"}</p>
+                    <p><strong>Kích hoạt:</strong> {selectedProduct.active ? "Có" : "Không"}</p>
+                    <p><strong>Trạng thái:</strong> {selectedProduct.status === "show" ? "Hiển thị" : "Ẩn"}</p>
+                    <p><strong>Lượt xem:</strong> {selectedProduct.view}</p>
+                    <p><strong>Ngày tạo:</strong> {new Date(selectedProduct.createdAt).toLocaleString()}</p>
+                    <p><strong>Ngày cập nhật:</strong> {new Date(selectedProduct.updatedAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Mô tả sản phẩm</h4>
+                  <p><strong>Mô tả ngắn:</strong> {selectedProduct.short_description}</p>
+                  <br />
+                  <p><strong>Mô tả chi tiết:</strong></p>
+                  <div className={styles.descriptionContent} dangerouslySetInnerHTML={{ __html: selectedProduct.description }} />
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Tùy chọn sản phẩm</h4>
+                  <table className={styles.optionsTable}>
+                    <thead>
+                      <tr>
+                        <th>Kích thước</th>
+                        <th>Giá</th>
+                        <th>Giá khuyến mãi</th>
+                        <th>Tồn kho</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedProduct.option.length > 0 ? (
+                        selectedProduct.option.map((opt, index) => (
+                          <tr key={index}>
+                            <td>{opt.value}</td>
+                            <td>{opt.price.toLocaleString()}₫</td>
+                            <td>{opt.discount_price ? opt.discount_price.toLocaleString() + "₫" : "Không có"}</td>
+                            <td>{opt.stock}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="text-center">Không có tùy chọn nào</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className={styles.detailsSection}>
+                  <h4>Hình ảnh sản phẩm</h4>
+                  <div className={styles.imageGallery}>
+                    {selectedProduct.images.length > 0 ? (
+                      selectedProduct.images.map((img, index) => (
+                        <img
+                          key={index}
+                          src={normalizeImageUrl(img)}
+                          alt={`${selectedProduct.name} hình ${index + 1}`}
+                          width={120}
+                          height={120}
+                          className={styles.detailImage}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <p>Không có hình ảnh</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {totalPages > 1 && (
         <div className={styles.pagination}>
           {(() => {

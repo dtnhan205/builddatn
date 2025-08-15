@@ -391,7 +391,7 @@ export default function Home() {
             đến sản phẩm an lành cho làn da, hòa quyện với sự bền vững và trách nhiệm với môi
             trường.
           </p>
-          <a href="/about" className={styles.brandCta}>
+          <a href="/user/about" className={styles.brandCta}>
             Tìm hiểu thêm
           </a>
         </div>

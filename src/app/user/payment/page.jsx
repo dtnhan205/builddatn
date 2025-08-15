@@ -115,7 +115,7 @@ export default function PaymentOnline() {
         const formattedDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
         setTimeout(() => {
           router.push(
-            `/payment-done?orderId=${encodeURIComponent(paymentData.orderId)}&date=${encodeURIComponent(formattedDate)}&total=${encodeURIComponent(amount)}&paymentMethod=bank`
+            `/user/payment-done?orderId=${encodeURIComponent(paymentData.orderId)}&date=${encodeURIComponent(formattedDate)}&total=${encodeURIComponent(amount)}&paymentMethod=bank`
           );
         }, 2000);
       } else if (paymentData.status === "expired") {

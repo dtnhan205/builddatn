@@ -761,7 +761,7 @@ export default function Brands() {
                   type="text"
                   value={newBrandName}
                   onChange={(e) => setNewBrandName(e.target.value)}
-                  className={styles.searchInput}
+                  className={styles.brand_input}
                   required
                 />
               </div>
@@ -771,7 +771,7 @@ export default function Brands() {
                   type="file"
                   accept="image/jpeg,image/png,image/jpg,image/gif,image/webp,image/svg+xml"
                   onChange={handleFileChange}
-                  className={styles.searchInput}
+                  className={styles.brand_input}
                   required
                 />
                 {previewUrl && (
@@ -850,7 +850,7 @@ export default function Brands() {
                   type="text"
                   value={newBrandName}
                   onChange={(e) => setNewBrandName(e.target.value)}
-                  className={styles.searchInput}
+                  className={styles.brand_input}
                   required
                 />
               </div>
@@ -860,7 +860,7 @@ export default function Brands() {
                   type="file"
                   accept="image/jpeg,image/png,image/jpg,image/gif,image/webp,image/svg+xml"
                   onChange={handleFileChange}
-                  className={styles.searchInput}
+                  className={styles.brand_input}
                 />
                 {previewUrl && (
                   <div className={styles.previewContainer}>

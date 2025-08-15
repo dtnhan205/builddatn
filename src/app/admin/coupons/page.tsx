@@ -468,14 +468,6 @@ function CouponsContent() {
                         >
                           <FontAwesomeIcon icon={faEdit} />
                         </button>
-                        <button
-                          className={styles.cancelBtn}
-                          onClick={() => confirmDelete(coupon._id)}
-                          title="Xóa mã giảm giá"
-                          aria-label={`Xóa mã giảm giá ${coupon.code}`}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
                       </div>
                     </td>
                   </tr>

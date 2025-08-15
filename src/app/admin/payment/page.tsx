@@ -13,7 +13,7 @@ interface Payment {
   transactionDate: string | null;
   bankUserName: string;
   description: string;
-  status: "pending" | "success" | "expired" | "failed";
+  status: "pending" | "success" | "expired";
   orderId: string;
 }
 
@@ -26,11 +26,9 @@ export default function PaymentHistoryPage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showPopup, setShowPopup] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "pending" | "success" | "expired" | "failed"
-  >("all");
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "success" | "expired">("all");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -43,14 +41,20 @@ export default function PaymentHistoryPage() {
     pending: "Chờ xử lý",
     success: "Thành công",
     expired: "Hết hạn",
-    failed: "Thất bại",
   };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString || dateString.trim() === "") return "Chưa có";
     const parsedDate = new Date(dateString);
     if (!isNaN(parsedDate.getTime())) {
-      return parsedDate.toLocaleDateString("vi-VN");
+      return parsedDate.toLocaleString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
     }
     console.warn("Invalid date from API:", dateString);
     return "Ngày không hợp lệ";
@@ -80,72 +84,77 @@ export default function PaymentHistoryPage() {
     }
   };
 
+  // Kiểm tra quyền admin
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
+
     if (!token || role !== "admin") {
       showNotification("Vui lòng đăng nhập với quyền admin!", "error");
       localStorage.clear();
       setTimeout(() => router.push("/user/login"), 1000);
+      return;
     }
   }, [router]);
 
+  // Lấy danh sách thanh toán
   useEffect(() => {
     const fetchPayments = async () => {
       try {
         setLoading(true);
         setError(null);
         const token = localStorage.getItem("token");
+
         if (!token) {
           showNotification("Không tìm thấy token, vui lòng đăng nhập lại!", "error");
-          localStorage.clear();
-          router.push("/user/login");
+          setTimeout(() => router.push("/user/login"), 1000);
           return;
         }
 
-        const userId = getUserIdFromToken(token);
-        if (!userId) {
-          showNotification("Không thể lấy userId từ token!", "error");
-          return;
-        }
-
-        const res = await fetch(`${API_BASE_URL}/api/payments/get-by-user`, {
+        const res = await fetch(`${API_BASE_URL}/api/payments/get-payments`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           method: "POST",
-          body: JSON.stringify({ userId }),
+          body: JSON.stringify({}), // Lấy tất cả thanh toán
           cache: "no-store",
         });
 
         if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`API Error: ${res.status} - ${errorText || res.statusText}`);
+          const errorData = await res.json();
+          throw new Error(errorData.message || `API Error: ${res.status}`);
         }
 
         const data = await res.json();
-        if (!Array.isArray(data.data)) throw new Error("Data is not an array from API");
+        if (!Array.isArray(data.data)) {
+          throw new Error("Dữ liệu từ API không phải là mảng");
+        }
 
         const validPayments = data.data.filter(
-          (payment: Payment) => payment.paymentCode && payment.status && payment.orderId
+          (payment: Payment) =>
+            payment.paymentCode &&
+            payment.status &&
+            payment.orderId &&
+            ["pending", "success", "expired"].includes(payment.status)
         );
         setPayments(validPayments);
         setFilteredPayments(validPayments);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error("Error fetching payment history:", errorMessage);
+        const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định";
+        console.error("Lỗi khi lấy lịch sử thanh toán:", errorMessage);
         setError(`Không thể tải lịch sử thanh toán: ${errorMessage}`);
         showNotification(`Không thể tải lịch sử thanh toán: ${errorMessage}`, "error");
       } finally {
         setLoading(false);
       }
     };
+
     fetchPayments();
   }, [router]);
 
   const filterPayments = useCallback(
-    (query: string, status: "all" | "pending" | "success" | "expired" | "failed") => {
+    (query: string, status: "all" | "pending" | "success" | "expired") => {
       const filtered = payments.filter((payment) => {
         const searchLower = query.toLowerCase().trim();
         const paymentCode = payment.paymentCode?.toLowerCase() || "";
@@ -168,12 +177,9 @@ export default function PaymentHistoryPage() {
 
   const debouncedFilter = useMemo(
     () =>
-      (function debounce<T extends (...args: any[]) => void>(
-        func: T,
-        wait: number
-      ): (...args: Parameters<T>) => void {
+      (function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
         let timeout: NodeJS.Timeout;
-        return (...args: Parameters<T>) => {
+        return (...args: Parameters<T>): void => {
           clearTimeout(timeout);
           timeout = setTimeout(() => func(...args), wait);
         };
@@ -214,7 +220,7 @@ export default function PaymentHistoryPage() {
             className={styles.confirmBtn}
             aria-label="Thử lại"
           >
-            <FontAwesomeIcon icon={faChevronRight} />
+            Thử lại
           </button>
         </div>
       </div>
@@ -257,7 +263,7 @@ export default function PaymentHistoryPage() {
           <select
             value={statusFilter}
             onChange={(e) =>
-              setStatusFilter(e.target.value as "all" | "pending" | "success" | "expired" | "failed")
+              setStatusFilter(e.target.value as "all" | "pending" | "success" | "expired")
             }
             className={styles.categorySelect}
             aria-label="Lọc theo trạng thái"
@@ -266,7 +272,6 @@ export default function PaymentHistoryPage() {
             <option value="pending">Chờ xử lý</option>
             <option value="success">Thành công</option>
             <option value="expired">Hết hạn</option>
-            <option value="failed">Thất bại</option>
           </select>
         </div>
       </div>
@@ -311,10 +316,10 @@ export default function PaymentHistoryPage() {
                   >
                     <td>{indexOfFirstPayment + index + 1}</td>
                     <td>{payment.paymentCode}</td>
-                    <td>{payment.amount.toLocaleString()} VND</td>
+                    <td>{payment.amount.toLocaleString("vi-VN")} VND</td>
                     <td>{formatDate(payment.transactionDate)}</td>
-                    <td>{payment.bankUserName}</td>
-                    <td className={styles.descriptionCell}>{payment.description}</td>
+                    <td>{payment.bankUserName || "Không xác định"}</td>
+                    <td className={styles.descriptionCell}>{payment.description || "N/A"}</td>
                     <td>
                       <span
                         className={
@@ -328,7 +333,7 @@ export default function PaymentHistoryPage() {
                         {statusMapping[payment.status] || payment.status}
                       </span>
                     </td>
-                    <td>{payment.orderId ? payment.orderId.slice(0, 5) : "N/A"}</td>
+                    <td>{payment.orderId ? payment.orderId.slice(0, 8) : "N/A"}</td>
                   </tr>
                 ))
             )}
@@ -361,6 +366,14 @@ export default function PaymentHistoryPage() {
 
               return (
                 <>
+                  <button
+                    className={styles.pageLink}
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1 || loading}
+                    title="Trang trước"
+                  >
+                    &lt;
+                  </button>
                   {showPrevEllipsis && (
                     <>
                       <button

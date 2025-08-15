@@ -1,4 +1,5 @@
 export interface Comment {
+  videos: any;
   adminReply: any;
   images: any;
   status: string;

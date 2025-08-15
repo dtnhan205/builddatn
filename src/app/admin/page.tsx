@@ -18,7 +18,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faRedo, faEdit } from "@fortawesome/free-solid-svg-icons";
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend);
 
@@ -26,6 +26,8 @@ ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, T
 interface Product {
   _id: string;
   name: string;
+  price?: number;
+  images?: string[];
 }
 
 interface OrderItem {
@@ -42,9 +44,29 @@ interface User {
   createdAt: string;
 }
 
+interface AdminReply {
+  user: User | null;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface Media {
+  url: string;
+  public_id: string;
+}
+
 interface Comment {
   _id: string;
+  content: string;
   createdAt: string;
+  updatedAt: string;
+  user: User | null;
+  product: Product | null;
+  rating: number;
+  adminReply: AdminReply | null;
+  images: Media[];
+  videos: Media[];
 }
 
 interface Order {
@@ -96,6 +118,18 @@ const formatDate = (dateString: string | number | Date): string => {
         .padStart(2, "0")}`;
 };
 
+const formatCommentDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+};
+
 const paymentStatusMapping = {
   pending: "Chờ xử lý",
   completed: "Đã thanh toán",
@@ -129,6 +163,7 @@ const allStatuses = [
   { value: "in_transit", label: "Đang vận chuyển" },
   { value: "delivered", label: "Đã giao hàng" },
   { value: "returned", label: "Đã hoàn" },
+  { value: "cancelled", label: "Hủy đơn hàng" },
 ];
 
 const getVietnamesePaymentStatus = (paymentStatus: string): string => {
@@ -137,6 +172,26 @@ const getVietnamesePaymentStatus = (paymentStatus: string): string => {
 
 const getVietnameseShippingStatus = (shippingStatus: string): string => {
   return shippingStatusMapping[shippingStatus as keyof typeof shippingStatusMapping] || shippingStatus;
+};
+
+const normalizeImageUrl = (path: string): string => {
+  if (path.startsWith("http")) return path;
+  return `https://api-zeal.onrender.com${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+const renderStars = (rating: number | undefined) => {
+  const stars = rating ? Math.min(Math.max(rating, 0), 5) : 0;
+  return (
+    <>
+      {Array(5)
+        .fill(0)
+        .map((_, i) => (
+          <span key={i} style={{ color: i < stars ? "#ffa500" : "#ccc" }}>
+            ★
+          </span>
+        ))}
+    </>
+  );
 };
 
 const AD_Home: React.FC = () => {
@@ -160,6 +215,9 @@ const AD_Home: React.FC = () => {
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [filteredPendingOrders, setFilteredPendingOrders] = useState<Order[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
   const [stats, setStats] = useState<Stats>({
     orders: 0,
     newUsers: 0,
@@ -178,8 +236,21 @@ const AD_Home: React.FC = () => {
     newStatus: string;
     currentStatus: string;
   } | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const ordersPerPage = 10;
+  const [showCancelModal, setShowCancelModal] = useState<{
+    orderId: string;
+    currentStatus: string;
+  } | null>(null);
+  const [selectedCancelReason, setSelectedCancelReason] = useState<string>("");
+  const [cancelReasonInput, setCancelReasonInput] = useState<string>("");
+  const [currentPageOrders, setCurrentPageOrders] = useState<number>(1);
+  const [currentPageComments, setCurrentPageComments] = useState<number>(1);
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+  const [searchQueryOrders, setSearchQueryOrders] = useState<string>("");
+  const [searchQueryComments, setSearchQueryComments] = useState<string>("");
+  const [replyContent, setReplyContent] = useState<{ [key: string]: string }>({});
+  const [isEditingReply, setIsEditingReply] = useState<{ [key: string]: boolean }>({});
+  const ordersPerPage = 8;
+  const commentsPerPage = 9;
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -187,8 +258,18 @@ const AD_Home: React.FC = () => {
   }, []);
 
   const months = [
-    "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
-    "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12",
+    "Tháng 1",
+    "Tháng 2",
+    "Tháng 3",
+    "Tháng 4",
+    "Tháng 5",
+    "Tháng 6",
+    "Tháng 7",
+    "Tháng 8",
+    "Tháng 9",
+    "Tháng 10",
+    "Tháng 11",
+    "Tháng 12",
   ];
 
   const weeks = useMemo(() => {
@@ -213,6 +294,13 @@ const AD_Home: React.FC = () => {
 
     return weekLabels;
   }, [selectedMonth, selectedYear]);
+
+  const cancelReasons = [
+    { value: "customer_request", label: "Khách hàng yêu cầu hủy" },
+    { value: "out_of_stock", label: "Hết hàng" },
+    { value: "invalid_info", label: "Thông tin đơn hàng không hợp lệ" },
+    { value: "other", label: "Khác" },
+  ];
 
   useEffect(() => {
     const currentDate = new Date();
@@ -251,6 +339,11 @@ const AD_Home: React.FC = () => {
   const handleShippingStatusChange = async (orderId: string, newStatus: string, currentStatus: string) => {
     if (currentStatus === "returned") {
       showNotification("Không thể thay đổi trạng thái đơn hàng Đã hoàn", "error");
+      return;
+    }
+
+    if (newStatus === "Hủy đơn hàng") {
+      handleCancelOrder(orderId, currentStatus);
       return;
     }
 
@@ -309,7 +402,6 @@ const AD_Home: React.FC = () => {
 
       const { order }: { order: Order } = await response.json();
 
-      // Update recentOrders locally
       setRecentOrders((prevOrders) =>
         prevOrders.map((o) =>
           o._id === orderId
@@ -318,7 +410,6 @@ const AD_Home: React.FC = () => {
         )
       );
 
-      // Re-fetch pending orders to reload the table
       const pendingOrdersRes = await fetch(
         "https://api-zeal.onrender.com/api/orders/admin/all?shippingStatus=pending",
         {
@@ -335,6 +426,7 @@ const AD_Home: React.FC = () => {
         (order: Order) => order.shippingStatus === "pending"
       );
       setPendingOrders(filteredPendingOrders);
+      setFilteredPendingOrders(filteredPendingOrders);
 
       showNotification("Cập nhật trạng thái vận chuyển thành công", "success");
     } catch (error) {
@@ -348,6 +440,194 @@ const AD_Home: React.FC = () => {
 
   const cancelConfirm = () => {
     setShowConfirm(null);
+  };
+
+  const handleCancelOrder = (orderId: string, currentStatus: string) => {
+    if (currentStatus !== "pending") {
+      showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý", "error");
+      return;
+    }
+    setShowCancelModal({ orderId, currentStatus });
+    setSelectedCancelReason("");
+    setCancelReasonInput("");
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!showCancelModal) return;
+    const { orderId } = showCancelModal;
+    const finalCancelReason = selectedCancelReason === "other" ? cancelReasonInput : selectedCancelReason;
+    if (!finalCancelReason || finalCancelReason.trim() === "") {
+      showNotification("Vui lòng chọn hoặc nhập lý do hủy đơn hàng", "error");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`https://api-zeal.onrender.com/api/orders/update/${orderId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          shippingStatus: "cancelled",
+          paymentStatus: "cancelled",
+          cancelReason: finalCancelReason,
+        }),
+      });
+      if (response.status === 401 || response.status === 403) {
+        showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("email");
+        router.push("/user/login");
+        return;
+      }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Lỗi API: ${response.status} ${errorText}`);
+      }
+      setPendingOrders((prev) => prev.filter((o) => o._id !== orderId));
+      setFilteredPendingOrders((prev) => prev.filter((o) => o._id !== orderId));
+      showNotification("Hủy đơn hàng thành công", "success");
+    } catch (error) {
+      showNotification("Không thể hủy đơn hàng", "error");
+    } finally {
+      setShowCancelModal(null);
+      setSelectedCancelReason("");
+      setCancelReasonInput("");
+    }
+  };
+
+  const handleToggleCommentDetails = (commentId: string) => {
+    setSelectedCommentId(commentId);
+  };
+
+  const closeCommentDetails = () => {
+    setSelectedCommentId(null);
+    setReplyContent({});
+    setIsEditingReply({});
+  };
+
+  const handleReplySubmit = async (commentId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
+      const content = replyContent[commentId]?.trim();
+      if (!content) {
+        showNotification("Nội dung phản hồi không được để trống.", "error");
+        return;
+      }
+
+      const res = await fetch(`https://api-zeal.onrender.com/api/comments/${commentId}/reply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        router.push("/user/login");
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Lỗi khi gửi phản hồi.");
+      }
+
+      const updatedComment = await res.json();
+      setComments((prevComments) =>
+        prevComments.map((c) => (c._id === commentId ? updatedComment.comment : c))
+      );
+      setFilteredComments((prevComments) =>
+        prevComments.map((c) => (c._id === commentId ? updatedComment.comment : c))
+      );
+      setReplyContent((prev) => ({ ...prev, [commentId]: "" }));
+      showNotification("Phản hồi đã được gửi thành công!", "success");
+      closeCommentDetails();
+    } catch (error: any) {
+      showNotification(error.message || "Lỗi khi gửi phản hồi.", "error");
+    }
+  };
+
+  const handleEditReplyClick = (commentId: string, currentContent: string) => {
+    setIsEditingReply((prev) => ({ ...prev, [commentId]: true }));
+    setReplyContent((prev) => ({ ...prev, [commentId]: currentContent }));
+  };
+
+  const handleUpdateReply = async (commentId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
+      const content = replyContent[commentId]?.trim();
+      if (!content) {
+        showNotification("Nội dung phản hồi không được để trống.", "error");
+        return;
+      }
+
+      console.log(`Sending PUT request to /api/comments/reply/${commentId}`);
+      const res = await fetch(`https://api-zeal.onrender.com/api/comments/reply/${commentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        router.push("/user/login");
+        return;
+      }
+
+      if (res.status === 404) {
+        showNotification("Bình luận không tồn tại hoặc endpoint không khả dụng.", "error");
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Lỗi khi cập nhật phản hồi.");
+      }
+
+      const updatedComment = await res.json();
+      setComments((prevComments) =>
+        prevComments.map((c) =>
+          c._id === commentId ? updatedComment.comment : c
+        )
+      );
+      setFilteredComments((prevComments) =>
+        prevComments.map((c) =>
+          c._id === commentId ? updatedComment.comment : c
+        )
+      );
+      setReplyContent((prev) => ({ ...prev, [commentId]: "" }));
+      setIsEditingReply((prev) => ({ ...prev, [commentId]: false }));
+      showNotification("Phản hồi đã được cập nhật thành công!", "success");
+      closeCommentDetails();
+    } catch (error: any) {
+      console.error("Error updating reply:", error);
+      showNotification(error.message || "Lỗi khi cập nhật phản hồi.", "error");
+    }
+  };
+
+  const handleCancelEdit = (commentId: string) => {
+    setIsEditingReply((prev) => ({ ...prev, [commentId]: false }));
+    setReplyContent((prev) => ({ ...prev, [commentId]: "" }));
   };
 
   const chartOptions = useMemo<ChartOptions<"line">>(
@@ -518,9 +798,10 @@ const AD_Home: React.FC = () => {
           throw new Error("Lỗi khi tải dữ liệu từ API.");
         }
 
-        const [orders, users, pendingOrdersData] = await Promise.all([
+        const [orders, users, commentsData, pendingOrdersData] = await Promise.all([
           ordersRes.json() as Promise<Order[]>,
           usersRes.json() as Promise<User[]>,
+          commentsRes.json() as Promise<Comment[]>,
           pendingOrdersRes.json() as Promise<Order[]>,
         ]);
 
@@ -528,10 +809,9 @@ const AD_Home: React.FC = () => {
         if (commentsRes.status === 403) {
           console.warn("Không có quyền xem bình luận. Fallback 0.");
         } else if (commentsRes.ok) {
-          comments = await commentsRes.json();
+          comments = commentsData;
         }
 
-        // Explicitly filter pendingOrders to ensure only "pending" status
         const filteredPendingOrders = pendingOrdersData.filter(
           (order) => order.shippingStatus === "pending"
         );
@@ -575,6 +855,9 @@ const AD_Home: React.FC = () => {
             .slice(0, 5)
         );
         setPendingOrders(filteredPendingOrders);
+        setFilteredPendingOrders(filteredPendingOrders);
+        setComments(comments);
+        setFilteredComments(comments);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
         setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
@@ -586,17 +869,117 @@ const AD_Home: React.FC = () => {
     fetchData();
   }, [timePeriod, selectedMonth, selectedYear, selectedWeek, router, calculateRevenue]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(pendingOrders.length / ordersPerPage);
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * ordersPerPage;
-    return pendingOrders.slice(startIndex, startIndex + ordersPerPage);
-  }, [pendingOrders, currentPage]);
+  useEffect(() => {
+    const filtered = pendingOrders.filter((order) => {
+      const matchesSearch =
+        order._id.toLowerCase().includes(searchQueryOrders.toLowerCase()) ||
+        (order.user?.username &&
+          order.user.username.toLowerCase().includes(searchQueryOrders.toLowerCase())) ||
+        order.paymentMethod.toLowerCase().includes(searchQueryOrders.toLowerCase());
+      return matchesSearch;
+    });
+    setFilteredPendingOrders(filtered);
+    setCurrentPageOrders(1);
+  }, [searchQueryOrders, pendingOrders]);
 
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+  useEffect(() => {
+    const filtered = comments.filter((comment) => {
+      const matchesSearch =
+        comment.content.toLowerCase().includes(searchQueryComments.toLowerCase()) ||
+        (comment.user?.username &&
+          comment.user.username.toLowerCase().includes(searchQueryComments.toLowerCase())) ||
+        (comment.product?.name &&
+          comment.product.name.toLowerCase().includes(searchQueryComments.toLowerCase())) ||
+        (comment.adminReply?.content &&
+          comment.adminReply.content.toLowerCase().includes(searchQueryComments.toLowerCase())) ||
+        (comment.videos &&
+          comment.videos.some((video) =>
+            video.public_id.toLowerCase().includes(searchQueryComments.toLowerCase())
+          )) ||
+        (comment.images &&
+          comment.images.some((image) =>
+            image.public_id.toLowerCase().includes(searchQueryComments.toLowerCase())
+          ));
+      return matchesSearch;
+    });
+    setFilteredComments(filtered);
+    setCurrentPageComments(1);
+  }, [searchQueryComments, comments]);
+
+  const totalPagesOrders = Math.ceil(filteredPendingOrders.length / ordersPerPage);
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPageOrders - 1) * ordersPerPage;
+    return filteredPendingOrders.slice(startIndex, startIndex + ordersPerPage);
+  }, [filteredPendingOrders, currentPageOrders]);
+
+  const totalPagesComments = Math.ceil(filteredComments.length / commentsPerPage);
+  const indexOfLastComment = currentPageComments * commentsPerPage;
+  const indexOfFirstComment = indexOfLastComment - commentsPerPage;
+  const currentComments = filteredComments.slice(indexOfFirstComment, indexOfLastComment);
+
+  const handlePageChangeOrders = (page: number) => {
+    if (page >= 1 && page <= totalPagesOrders) {
+      setCurrentPageOrders(page);
     }
+  };
+
+  const handlePageChangeComments = (page: number) => {
+    if (page >= 1 && page <= totalPagesComments) {
+      setCurrentPageComments(page);
+      setSelectedCommentId(null);
+    }
+  };
+
+  const getPaginationInfoOrders = () => {
+    const visiblePages: number[] = [];
+    let showPrevEllipsis = false;
+    let showNextEllipsis = false;
+
+    if (totalPagesOrders <= 3) {
+      for (let i = 1; i <= totalPagesOrders; i++) {
+        visiblePages.push(i);
+      }
+    } else {
+      if (currentPageOrders === 1) {
+        visiblePages.push(1, 2, 3);
+        showNextEllipsis = totalPagesOrders > 3;
+      } else if (currentPageOrders === totalPagesOrders) {
+        visiblePages.push(totalPagesOrders - 2, totalPagesOrders - 1, totalPagesOrders);
+        showPrevEllipsis = totalPagesOrders > 3;
+      } else {
+        visiblePages.push(currentPageOrders - 1, currentPageOrders, currentPageOrders + 1);
+        showPrevEllipsis = currentPageOrders > 2;
+        showNextEllipsis = currentPageOrders < totalPagesOrders - 1;
+      }
+    }
+
+    return { visiblePages, showPrevEllipsis, showNextEllipsis };
+  };
+
+  const getPaginationInfoComments = () => {
+    const visiblePages: number[] = [];
+    let showPrevEllipsis = false;
+    let showNextEllipsis = false;
+
+    if (totalPagesComments <= 3) {
+      for (let i = 1; i <= totalPagesComments; i++) {
+        visiblePages.push(i);
+      }
+    } else {
+      if (currentPageComments === 1) {
+        visiblePages.push(1, 2, 3);
+        showNextEllipsis = totalPagesComments > 3;
+      } else if (currentPageComments === totalPagesComments) {
+        visiblePages.push(totalPagesComments - 2, totalPagesComments - 1, totalPagesComments);
+        showPrevEllipsis = totalPagesComments > 3;
+      } else {
+        visiblePages.push(currentPageComments - 1, currentPageComments, currentPageComments + 1);
+        showPrevEllipsis = currentPageComments > 2;
+        showNextEllipsis = currentPageComments < totalPagesComments - 1;
+      }
+    }
+
+    return { visiblePages, showPrevEllipsis, showNextEllipsis };
   };
 
   return (
@@ -699,111 +1082,651 @@ const AD_Home: React.FC = () => {
         )}
       </section>
 
-      <section className={styles.recentOrders}>
-        <div className={styles.sectionHeader}>
-          <h3>Đơn hàng đang chờ xử lý</h3>
-        </div>
-        <div className={styles.tableContainer}>
-          <table className={styles.productTable}>
-            <thead className={styles.productTableThead}>
-              <tr>
-                <th>ID</th>
-                <th>Tên</th>
-                <th>Tổng Tiền</th>
-                <th>Ngày</th>
-                <th>Trạng Thái Thanh Toán</th>
-                <th>Trạng Thái Vận Chuyển</th>
-                <th>Phương Thức Thanh Toán</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+      <div className={styles.tablesContainer}>
+        <section className={styles.recentOrders}>
+          <div className={styles.sectionHeader}>
+            <h3>Đơn hàng đang chờ xử lý</h3>
+            <div className={styles.filterContainer}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo ID, tên người dùng, phương thức thanh toán..."
+                value={searchQueryOrders}
+                onChange={(e) => setSearchQueryOrders(e.target.value)}
+                className={styles.searchInput}
+                aria-label="Tìm kiếm đơn hàng"
+              />
+            </div>
+          </div>
+          <div className={styles.tableContainer}>
+            <table className={styles.productTable}>
+              <thead className={styles.productTableThead}>
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center" }}>
-                    Đang tải...
-                  </td>
+                  <th>ID</th>
+                  <th>Tên</th>
+                  <th>Tổng Tiền</th>
+                  <th>Ngày</th>
+                  <th>Trạng Thái Thanh Toán</th>
+                  <th>Trạng Thái Vận Chuyển</th>
+                  <th>Phương Thức Thanh Toán</th>
                 </tr>
-              ) : paginatedOrders.length > 0 ? (
-                paginatedOrders.map((order, index) => (
-                  <tr key={order._id} className={styles.productRow}>
-                    <td>{(currentPage - 1) * ordersPerPage + index + 1}</td>
-                    <td>{order.user?.username || "Không xác định"}</td>
-                    <td>{order.total.toLocaleString()} VND</td>
-                    <td>{formatDate(order.createdAt)}</td>
-                    <td>{getVietnamesePaymentStatus(order.paymentStatus)}</td>
-                    <td>
-                      <select
-                        value={getVietnameseShippingStatus(order.shippingStatus)}
-                        onChange={(e) =>
-                          handleShippingStatusChange(order._id, e.target.value, order.shippingStatus)
-                        }
-                        className={styles.categorySelect}
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={order.shippingStatus === "returned"}
-                      >
-                        {allStatuses.map((status) => (
-                          <option
-                            key={status.value}
-                            value={status.label}
-                            disabled={
-                              order.shippingStatus === "returned" ||
-                              (!statusProgression[order.shippingStatus].includes(status.value) &&
-                                status.value !== order.shippingStatus)
-                            }
-                          >
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      {order.paymentMethod === "cod"
-                        ? "Thanh toán khi nhận hàng"
-                        : order.paymentMethod === "bank"
-                        ? "Chuyển khoản"
-                        : order.paymentMethod || "Không xác định"}
+              </thead>
+              <tbody>
+                {loading && filteredPendingOrders.length === 0 ? (
+                  <tr key="loading-orders">
+                    <td colSpan={7} style={{ textAlign: "center" }}>
+                      <div className={styles.processingIndicator}>
+                        <FontAwesomeIcon icon={faRedo} spin />
+                        <p>Đang tải...</p>
+                      </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className={styles.emptyState}>
-                    <h3>Chưa có đơn hàng đang chờ xử lý</h3>
-                    <p>Hiện tại không có đơn hàng nào đang chờ xử lý.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {totalPages > 1 && (
-          <div className={styles.pagination}>
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={styles.paginationButton}
-            >
-              Trước
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={styles.paginationButton}
-            >
-              Sau
-            </button>
+                ) : error && filteredPendingOrders.length === 0 ? (
+                  <tr key="error-orders">
+                    <td colSpan={7} style={{ textAlign: "center" }}>
+                      <p className={styles.errorMessage}>{error}</p>
+                      <button
+                        className={styles.retryButton}
+                        onClick={async () => {
+                          setLoading(true);
+                          setError(null);
+                          try {
+                            const token = localStorage.getItem("token");
+                            if (!token) {
+                              throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+                            }
+                            const pendingOrdersRes = await fetch(
+                              "https://api-zeal.onrender.com/api/orders/admin/all?shippingStatus=pending",
+                              {
+                                headers: { Authorization: `Bearer ${token}` },
+                              }
+                            );
+                            if (!pendingOrdersRes.ok) {
+                              throw new Error("Lỗi khi tải lại danh sách đơn hàng đang chờ xử lý.");
+                            }
+                            const pendingOrdersData = await pendingOrdersRes.json();
+                            const filteredPendingOrders = pendingOrdersData.filter(
+                              (order: Order) => order.shippingStatus === "pending"
+                            );
+                            setPendingOrders(filteredPendingOrders);
+                            setFilteredPendingOrders(filteredPendingOrders);
+                          } catch (err) {
+                            console.error("Lỗi khi tải dữ liệu:", err);
+                            setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        title="Thử lại"
+                      >
+                        <FontAwesomeIcon icon={faRedo} />
+                      </button>
+                    </td>
+                  </tr>
+                ) : paginatedOrders.length > 0 ? (
+                  paginatedOrders.map((order, index) => (
+                    <tr key={order._id} className={styles.productRow}>
+                      <td>{(currentPageOrders - 1) * ordersPerPage + index + 1}</td>
+                      <td>{order.user?.username || "Không xác định"}</td>
+                      <td>{order.total.toLocaleString()} VND</td>
+                      <td>{formatDate(order.createdAt)}</td>
+                      <td>{getVietnamesePaymentStatus(order.paymentStatus)}</td>
+                      <td>
+                        <select
+                          value={getVietnameseShippingStatus(order.shippingStatus)}
+                          onChange={(e) =>
+                            handleShippingStatusChange(order._id, e.target.value, order.shippingStatus)
+                          }
+                          className={styles.categorySelect}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={order.shippingStatus === "returned"}
+                        >
+                          {allStatuses.map((status) => (
+                            <option
+                              key={status.value}
+                              value={status.label}
+                              disabled={
+                                order.shippingStatus === "returned" ||
+                                (status.value !== "cancelled" &&
+                                  !statusProgression[order.shippingStatus].includes(status.value) &&
+                                  status.value !== order.shippingStatus) ||
+                                (status.value === "cancelled" && order.shippingStatus !== "pending")
+                              }
+                            >
+                              {status.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        {order.paymentMethod === "cod"
+                          ? "Thanh toán khi nhận hàng"
+                          : order.paymentMethod === "bank"
+                          ? "Chuyển khoản"
+                          : order.paymentMethod || "Không xác định"}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr key="empty-orders">
+                    <td colSpan={7} className={styles.emptyState}>
+                      <h3>Chưa có đơn hàng đang chờ xử lý</h3>
+                      <p>Hiện tại không có đơn hàng nào phù hợp với bộ lọc.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </section>
+          {totalPagesOrders > 1 && (
+            <div className={styles.pagination}>
+              {(() => {
+                const { visiblePages, showPrevEllipsis, showNextEllipsis } = getPaginationInfoOrders();
+                return (
+                  <>
+                    {showPrevEllipsis && (
+                      <>
+                        <button
+                          className={`${styles.paginationButton} ${styles.firstLastPage}`}
+                          onClick={() => handlePageChangeOrders(1)}
+                          disabled={loading}
+                          title="Trang đầu tiên"
+                        >
+                          1
+                        </button>
+                        <div
+                          className={styles.ellipsis}
+                          onClick={() => handlePageChangeOrders(Math.max(1, currentPageOrders - 3))}
+                          title="Trang trước đó"
+                        >
+                          ...
+                        </div>
+                      </>
+                    )}
+                    {visiblePages.map((page) => (
+                      <button
+                        key={page}
+                        className={`${styles.paginationButton} ${
+                          currentPageOrders === page ? styles.active : ""
+                        }`}
+                        onClick={() => handlePageChangeOrders(page)}
+                        disabled={loading}
+                        title={`Trang ${page}`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    {showNextEllipsis && (
+                      <>
+                        <div
+                          className={styles.ellipsis}
+                          onClick={() => handlePageChangeOrders(Math.min(totalPagesOrders, currentPageOrders + 3))}
+                          title="Trang tiếp theo"
+                        >
+                          ...
+                        </div>
+                        <button
+                          className={`${styles.paginationButton} ${styles.firstLastPage}`}
+                          onClick={() => handlePageChangeOrders(totalPagesOrders)}
+                          disabled={loading}
+                          title="Trang cuối cùng"
+                        >
+                          {totalPagesOrders}
+                        </button>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </section>
+
+        <section className={styles.recentComments}>
+          <div className={styles.sectionHeader}>
+            <h3>Đánh giá mới</h3>
+            <div className={styles.filterContainer}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo nội dung, người dùng, sản phẩm..."
+                value={searchQueryComments}
+                onChange={(e) => setSearchQueryComments(e.target.value)}
+                className={styles.searchInput}
+                aria-label="Tìm kiếm Đánh giá"
+              />
+            </div>
+          </div>
+          <div className={styles.tableContainer}>
+            <table className={styles.productTable}>
+              <thead className={styles.productTableThead}>
+                <tr>
+                  <th>Người dùng</th>
+                  <th>Sản phẩm</th>
+                  <th>Nội dung</th>
+                  <th>Số sao</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && comments.length === 0 ? (
+                  <tr key="loading-comments">
+                    <td colSpan={4} style={{ textAlign: "center" }}>
+                      <div className={styles.processingIndicator}>
+                        <FontAwesomeIcon icon={faRedo} spin />
+                        <p>Đang tải danh sách Đánh giá...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error && comments.length === 0 ? (
+                  <tr key="error-comments">
+                    <td colSpan={4} style={{ textAlign: "center" }}>
+                      <p className={styles.errorMessage}>{error}</p>
+                      <button
+                        className={styles.retryButton}
+                        onClick={async () => {
+                          setLoading(true);
+                          setError(null);
+                          try {
+                            const token = localStorage.getItem("token");
+                            if (!token) {
+                              throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+                            }
+                            const res = await fetch("https://api-zeal.onrender.com/api/comments", {
+                              method: "GET",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              cache: "no-store",
+                            });
+                            if (res.status === 401 || res.status === 403) {
+                              showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
+                              localStorage.removeItem("token");
+                              localStorage.removeItem("role");
+                              router.push("/user/login");
+                              return;
+                            }
+                            if (!res.ok) {
+                              throw new Error(`Lỗi khi tải danh sách Đánh giá: ${res.status}`);
+                            }
+                            const data: Comment[] = await res.json();
+                            if (!Array.isArray(data)) {
+                              throw new Error("Dữ liệu Đánh giá không hợp lệ");
+                            }
+                            setComments(data);
+                            setFilteredComments(data);
+                          } catch (error: any) {
+                            const errorMessage = error.message || "Không thể tải danh sách Đánh giá.";
+                            showNotification(errorMessage, "error");
+                            setError(errorMessage);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        title="Thử lại"
+                      >
+                        <FontAwesomeIcon icon={faRedo} />
+                      </button>
+                    </td>
+                  </tr>
+                ) : currentComments.length > 0 ? (
+                  currentComments.map((comment) => (
+                    <tr
+                      key={comment._id}
+                      onClick={() => handleToggleCommentDetails(comment._id)}
+                      className={`${styles.productRow} ${
+                        selectedCommentId === comment._id ? styles.productRowActive : ""
+                      }`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>
+                        {comment.user
+                          ? `${comment.user.username} (${comment.user.email})`
+                          : "Người dùng không tồn tại"}
+                      </td>
+                      <td>{comment.product?.name || "Sản phẩm không tồn tại"}</td>
+                      <td>{comment.content}</td>
+                      <td>{renderStars(comment.rating)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr key="empty-comments">
+                    <td colSpan={4} className={styles.emptyState}>
+                      <h3>Không có Đánh giá</h3>
+                      <p>Chưa có Đánh giá nào phù hợp với bộ lọc.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {totalPagesComments > 1 && (
+            <div className={styles.pagination}>
+              {(() => {
+                const { visiblePages, showPrevEllipsis, showNextEllipsis } = getPaginationInfoComments();
+                return (
+                  <>
+                    {showPrevEllipsis && (
+                      <>
+                        <button
+                          className={`${styles.paginationButton} ${styles.firstLastPage}`}
+                          onClick={() => handlePageChangeComments(1)}
+                          disabled={loading}
+                          title="Trang đầu tiên"
+                        >
+                          1
+                        </button>
+                        <div
+                          className={styles.ellipsis}
+                          onClick={() => handlePageChangeComments(Math.max(1, currentPageComments - 3))}
+                          title="Trang trước đó"
+                        >
+                          ...
+                        </div>
+                      </>
+                    )}
+                    {visiblePages.map((page) => (
+                      <button
+                        key={page}
+                        className={`${styles.paginationButton} ${
+                          currentPageComments === page ? styles.active : ""
+                        }`}
+                        onClick={() => handlePageChangeComments(page)}
+                        disabled={loading}
+                        title={`Trang ${page}`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    {showNextEllipsis && (
+                      <>
+                        <div
+                          className={styles.ellipsis}
+                          onClick={() => handlePageChangeComments(Math.min(totalPagesComments, currentPageComments + 3))}
+                          title="Trang tiếp theo"
+                        >
+                          ...
+                        </div>
+                        <button
+                          className={`${styles.paginationButton} ${styles.firstLastPage}`}
+                          onClick={() => handlePageChangeComments(totalPagesComments)}
+                          disabled={loading}
+                          title="Trang cuối cùng"
+                        >
+                          {totalPagesComments}
+                        </button>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {selectedCommentId && (
+        <div className={styles.modalOverlay} onClick={closeCommentDetails}>
+          <div className={styles.commentModal} onClick={(e) => e.stopPropagation()}>
+            {comments.find((comment) => comment._id === selectedCommentId) && (
+              (() => {
+                const comment = comments.find((comment) => comment._id === selectedCommentId)!;
+                return (
+                  <>
+                    <h2>Chi tiết Đánh giá</h2>
+                    <button
+                      className={styles.cancelBtn}
+                      onClick={closeCommentDetails}
+                      title="Đóng"
+                      aria-label="Đóng chi tiết đánh giá"
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                    <div className={styles.commentDetails}>
+                      <div className={styles.detailsContainer}>
+                        <div className={styles.detailsSection}>
+                          <h4>Thông tin người dùng</h4>
+                          <div className={styles.detailsGrid}>
+                            <p>
+                              <strong>Tên người dùng:</strong> {comment.user?.username || "Không có"}
+                            </p>
+                            <p>
+                              <strong>Email:</strong> {comment.user?.email || "Không có"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Nội dung Đánh giá</h4>
+                          <p>{comment.content}</p>
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Số sao</h4>
+                          <p>{renderStars(comment.rating)} ({comment.rating || 0}/5)</p>
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Thông tin sản phẩm</h4>
+                          <div className={styles.detailsGrid}>
+                            <p>
+                              <strong>Tên sản phẩm:</strong> {comment.product?.name || "Không có"}
+                            </p>
+                            <p>
+                              <strong>Giá:</strong>{" "}
+                              {comment.product?.price
+                                ? comment.product.price.toLocaleString() + "₫"
+                                : "Không có"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Ngày Đánh giá</h4>
+                          <p>{formatCommentDate(comment.createdAt)}</p>
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Hình ảnh</h4>
+                          {comment.images && comment.images.length > 0 ? (
+                            <div className={styles.mediaContainer}>
+                              {comment.images.map((image, index) => (
+                                <div key={index} className={styles.mediaItem}>
+                                  <img
+                                    src={normalizeImageUrl(image.url)}
+                                    alt={`Hình ảnh ${image.public_id}`}
+                                    className={styles.commentImage}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src =
+                                        "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p>Không có hình ảnh nào được đính kèm.</p>
+                          )}
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Video</h4>
+                          {comment.videos && comment.videos.length > 0 ? (
+                            <div className={styles.mediaContainer}>
+                              {comment.videos.map((video, index) => (
+                                <div key={index} className={styles.mediaItem}>
+                                  <video
+                                    src={normalizeImageUrl(video.url)}
+                                    controls
+                                    className={styles.commentVideo}
+                                    onError={(e) => {
+                                      (e.target as HTMLVideoElement).poster =
+                                        "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p>Không có video nào được đính kèm.</p>
+                          )}
+                        </div>
+                        <div className={styles.detailsSection}>
+                          <h4>Phản hồi từ admin</h4>
+                          {comment.adminReply ? (
+                            isEditingReply[comment._id] ? (
+                              <div>
+                                <textarea
+                                  value={replyContent[comment._id] || ""}
+                                  onChange={(e) =>
+                                    setReplyContent({
+                                      ...replyContent,
+                                      [comment._id]: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Chỉnh sửa phản hồi của bạn..."
+                                  className={styles.replyInput}
+                                  aria-label="Chỉnh sửa phản hồi từ admin"
+                                />
+                                <div className={styles.buttonGroup}>
+                                  <button
+                                    onClick={() => handleUpdateReply(comment._id)}
+                                    className={styles.replyButton}
+                                    disabled={!replyContent[comment._id]?.trim()}
+                                    title="Cập nhật phản hồi"
+                                    aria-label="Cập nhật phản hồi từ admin"
+                                  >
+                                    Cập nhật phản hồi
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelEdit(comment._id)}
+                                    className={styles.cancelButton}
+                                    title="Hủy chỉnh sửa"
+                                    aria-label="Hủy chỉnh sửa phản hồi"
+                                  >
+                                    Hủy
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className={styles.detailsGrid}>
+                                <p>
+                                  <strong>Người phản hồi:</strong>{" "}
+                                  {comment.adminReply.user?.username || "Không có"}
+                                </p>
+                                <p>
+                                  <strong>Nội dung:</strong> {comment.adminReply.content}
+                                </p>
+                                <p>
+                                  <strong>Ngày phản hồi:</strong>{" "}
+                                  {formatCommentDate(comment.adminReply.createdAt)}
+                                </p>
+                                {comment.adminReply.updatedAt && (
+                                  <p>
+                                    <strong>Ngày cập nhật:</strong>{" "}
+                                    {formatCommentDate(comment.adminReply.updatedAt)}
+                                  </p>
+                                )}
+                                <button
+                                  onClick={() =>
+                                    handleEditReplyClick(
+                                      comment._id,
+                                      comment.adminReply!.content
+                                    )
+                                  }
+                                  className={styles.editButton}
+                                  title="Chỉnh sửa phản hồi"
+                                  aria-label="Chỉnh sửa phản hồi từ admin"
+                                >
+                                  <FontAwesomeIcon icon={faEdit} /> Chỉnh sửa
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            <div>
+                              <p>Chưa có phản hồi</p>
+                              <textarea
+                                value={replyContent[comment._id] || ""}
+                                onChange={(e) =>
+                                  setReplyContent({
+                                    ...replyContent,
+                                    [comment._id]: e.target.value,
+                                  })
+                                }
+                                placeholder="Nhập phản hồi của bạn..."
+                                className={styles.replyInput}
+                                aria-label="Phản hồi từ admin"
+                              />
+                              <button
+                                onClick={() => handleReplySubmit(comment._id)}
+                                className={styles.replyButton}
+                                disabled={!replyContent[comment._id]?.trim()}
+                                title="Gửi phản hồi"
+                                aria-label="Gửi phản hồi từ admin"
+                              >
+                                Gửi phản hồi
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalhuy}>
+            <h2>Xác nhận hủy đơn hàng</h2>
+            <p>Vui lòng chọn hoặc nhập lý do hủy đơn hàng:</p>
+            <select
+              value={selectedCancelReason}
+              onChange={(e) => setSelectedCancelReason(e.target.value)}
+              className={styles.categorySelect}
+              aria-label="Chọn lý do hủy đơn hàng"
+            >
+              <option value="" disabled>
+                Chọn lý do
+              </option>
+              {cancelReasons.map((reason) => (
+                <option key={reason.value} value={reason.value}>
+                  {reason.label}
+                </option>
+              ))}
+            </select>
+            {selectedCancelReason === "other" && (
+              <input
+                type="text"
+                placeholder="Nhập lý do hủy đơn"
+                value={cancelReasonInput}
+                onChange={(e) => setCancelReasonInput(e.target.value)}
+                className={styles.cancelReasonInput}
+                style={{ marginTop: "10px" }}
+                aria-label="Nhập lý do hủy đơn hàng tùy chỉnh"
+              />
+            )}
+            <div className={styles.modalActions}>
+              <button
+                className={styles.confirmBtn}
+                onClick={confirmCancelOrder}
+                disabled={
+                  !selectedCancelReason ||
+                  (selectedCancelReason === "other" && !cancelReasonInput.trim())
+                }
+                title="Xác nhận"
+                aria-label="Xác nhận hủy đơn hàng"
+              >
+                <FontAwesomeIcon icon={faCheck} />
+              </button>
+              <button
+                className={styles.cancelBtn}
+                onClick={() => setShowCancelModal(null)}
+                title="Hủy"
+                aria-label="Hủy thay đổi trạng thái"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showConfirm && (
         <div className={styles.modalOverlay}>

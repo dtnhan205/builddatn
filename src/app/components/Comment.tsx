@@ -3,5 +3,4 @@ export interface Comment {
   user: { username: string };
   content: string;
   createdAt: string;
-  status: string;
 }

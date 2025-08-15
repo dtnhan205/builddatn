@@ -30,7 +30,7 @@ const generateSlug = (title: string): string => {
   console.log("Tiêu đề đầu vào:", title);
   const slug = title
     .toLowerCase()
-    .replace(/đ/g, "d") // Thay "đ" thành "d"
+    .replace(/đ/g, "d") 
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/['",]/g, "")

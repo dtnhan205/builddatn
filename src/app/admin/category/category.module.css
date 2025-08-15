@@ -336,6 +336,114 @@
   background: #d32f2f;
 }
 
+/* Popup thêm danh mục mới */
+.addCategoryModalContent {
+  background: #ffffff;
+  padding: 28px 24px 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+  animation: fadeInModal 0.2s;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: translateY(-30px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.addCategoryModalContent h2 {
+  color: #004C59;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.addCategoryForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.addCategoryForm .formGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.addCategoryForm label {
+  font-weight: 500;
+  color: #334155;
+  font-size: 16px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.addCategoryForm input[type="text"] {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #334155;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+}
+
+.addCategoryForm input[type="text"]:focus {
+  border-color: #4CAF50;
+  outline: none;
+}
+
+.addCategoryForm .formButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.addCategoryForm .btnAdd,
+.addCategoryForm .btnCancel {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.addCategoryForm .btnAdd {
+  background: #4CAF50;
+  color: white;
+}
+
+.addCategoryForm .btnAdd:hover {
+  background: #45a049;
+}
+
+.addCategoryForm .btnCancel {
+  background: #f44336;
+  color: white;
+}
+
+.addCategoryForm .btnCancel:hover {
+  background: #d32f2f;
+}
+
+.addCategoryForm .errorMessage {
+  color: #f44336;
+  font-size: 13px;
+  margin-top: -8px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
 .errorContainer {
   max-width: 1400px;
   margin: 24px auto;
@@ -451,4 +559,14 @@
   .productTable td:nth-child(2) {
     max-width: 150px; /* Giảm chiều rộng cột Sản phẩm trên màn hình nhỏ */
   }
+}
+.newInput {
+  flex: 1;
+  min-width: 280px;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  background-size: 18px;
 }

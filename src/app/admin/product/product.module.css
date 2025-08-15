@@ -154,15 +154,6 @@
   background: #f8fafc;
 }
 
-.productRowActive {
-  background: rgba(76, 175, 80, 0.1);
-  border-left: 3px solid #4CAF50;
-}
-
-.detailsRow {
-  background: #f9fafb;
-}
-
 .productDetails {
   padding: 20px;
   margin: 12px;
@@ -170,6 +161,7 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
+  position: relative;
 }
 
 .productDetails h3 {
@@ -177,6 +169,24 @@
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 16px;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  background: #f44336;
+  color: white;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.closeBtn:hover {
+  background: #d32f2f;
 }
 
 .detailsContainer {
@@ -395,9 +405,11 @@
   padding: 24px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
+  max-width: 1100px;
   width: 90%;
-  text-align: center;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
 }
 
 .modalContent h2 {
@@ -514,21 +526,26 @@
 .pageLink:focus-visible,
 .confirmBtn:focus-visible,
 .cancelBtn:focus-visible,
-.retryButton:focus-visible {
+.retryButton:focus-visible,
+.closeBtn:focus-visible {
   outline: 2px solid #4CAF50;
   outline-offset: 2px;
 }
 
-.tableContainer::-webkit-scrollbar {
+.tableContainer::-webkit-scrollbar,
+.modalContent::-webkit-scrollbar {
+  width: 6px;
   height: 6px;
 }
 
-.tableContainer::-webkit-scrollbar-track {
+.tableContainer::-webkit-scrollbar-track,
+.modalContent::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-.tableContainer::-webkit-scrollbar-thumb {
+.tableContainer::-webkit-scrollbar-thumb,
+.modalContent::-webkit-scrollbar-thumb {
   background: #4CAF50;
   border-radius: 3px;
 }
@@ -593,5 +610,10 @@
   .detailImage {
     width: 80px;
     height: 80px;
+  }
+
+  .modalContent {
+    width: 95%;
+    max-height: 90vh;
   }
 }

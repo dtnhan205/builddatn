@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./add_product.module.css";
-import ToastNotification from "../../user/ToastNotification/ToastNotification";
+import ToastNotification from "../../user/ToastNotification/ToastNotification"; // Updated import to match CommentPage structure
 
 // Hàm slugify tùy chỉnh cho tiếng Việt
 const slugify = (text: string): string => {
@@ -93,7 +93,7 @@ const AddProduct = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [formData, setFormData] = useState({
     name: "",
-    slug: "", // Thêm trường slug
+    slug: "",
     id_category: "",
     id_brand: "",
     short_description: "",
@@ -462,7 +462,7 @@ const AddProduct = () => {
     try {
       const productData = new FormData();
       productData.append("name", formData.name);
-      productData.append("slug", formData.slug); // Thêm slug vào FormData
+      productData.append("slug", formData.slug);
       productData.append("id_category", formData.id_category);
       productData.append("id_brand", formData.id_brand);
       productData.append("short_description", formData.short_description);
@@ -502,7 +502,7 @@ const AddProduct = () => {
         showNotification("Thêm sản phẩm thành công", "success");
         setFormData({
           name: "",
-          slug: "", // Reset slug
+          slug: "",
           id_category: "",
           id_brand: "",
           short_description: "",
@@ -574,7 +574,7 @@ const AddProduct = () => {
                   className={styles.input}
                   required
                   placeholder="Slug sẽ được tạo tự động"
-                  readOnly // Làm trường slug chỉ đọc
+                  readOnly
                 />
               </div>
               <div className={styles.formGroup}>

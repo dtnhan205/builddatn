@@ -46,14 +46,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       if (!validateToken(token)) return;
 
       try {
+        // Fetch logo
         const logoRes = await fetch("https://api-zeal.onrender.com/api/interfaces/logo-shop", {
           headers: { Authorization: `Bearer ${token}` },
-          next: { revalidate: 3600 }, // Cache trong 1 giờ
+          cache: "no-store",
         });
+        const logoData = await logoRes.json();
+        if (logoRes.ok && logoData.paths && logoData.paths[0]) {
+          setLogo(logoData.paths[0]);
+        }
 
+        // Fetch favicon
         const faviconRes = await fetch("https://api-zeal.onrender.com/api/interfaces/favicon", {
           headers: { Authorization: `Bearer ${token}` },
-          next: { revalidate: 3600 }, // Cache trong 1 giờ
+          cache: "no-store",
         });
         const faviconData = await faviconRes.json();
         if (faviconRes.ok && faviconData.paths && faviconData.paths[0]) {
@@ -114,7 +120,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             { href: "/admin/coupons", label: "Khuyến mãi" },
             { href: "/admin/customer", label: "Khách hàng" },
             { href: "/admin/interface_config", label: "Hình ảnh website" },
-            { href: "/admin/payment", label: "Lịch sữ chuyển khoản" },
+            { href: "/admin/payment", label: "Lịch sử chuyển khoản" },
             { href: "/admin/contact", label: "Liên hệ" },
             { href: "/", label: "Truy cập trang khách" },
           ].map((item) => (
