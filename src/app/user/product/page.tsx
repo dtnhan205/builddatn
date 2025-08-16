@@ -734,16 +734,6 @@ export default function ProductPage() {
                       {product?.name || "Tên sản phẩm"}
                     </h3>
                     <p className={styles["best-selling-price"]}>{formatPrice(product?.price)}</p>
-                    <span
-                      title="Thêm vào Giỏ Hàng"
-                      className={`${styles.cartIcon} ${addingToCart ? styles.disabled : ""}`}
-                      onClick={e => {
-                        e.preventDefault();
-                        if (!addingToCart) addToCart(product);
-                      }}
-                    >
-                      <i className="fas fa-shopping-cart"></i>
-                    </span>
                   </div>
                 </div>
               </Link>
