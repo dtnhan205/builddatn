@@ -86,7 +86,7 @@ const OrderPage: React.FC = () => {
     completed: "Đã thanh toán",
     pending: "Chưa thanh toán",
     failed: "Chưa thanh toán",
-    cancelled: "Chưa thanh toán",
+    cancelled: "Hoàn tiền",
   };
 
   const shippingStatusMapping = {
@@ -102,6 +102,13 @@ const OrderPage: React.FC = () => {
     requested: "Đã yêu cầu",
     approved: "Đã chấp nhận",
     rejected: "Đã từ chối",
+  };
+
+  const cancelReasonMapping = {
+    out_of_stock: "Hết hàng",
+    customer_cancelled: "Khách hủy",
+    system_error: "Lỗi hệ thống",
+    other: "Khác",
   };
 
   const reverseShippingStatusMapping = {
@@ -148,7 +155,11 @@ const OrderPage: React.FC = () => {
     setNotification({ message, type });
   };
 
-  // Check admin access
+  const getVietnameseCancelReason = (cancelReason: string | undefined) => {
+    if (!cancelReason) return "Không có lý do";
+    return cancelReasonMapping[cancelReason as keyof typeof cancelReasonMapping] || cancelReason;
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -158,7 +169,6 @@ const OrderPage: React.FC = () => {
     }
   }, [router]);
 
-  // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -188,7 +198,6 @@ const OrderPage: React.FC = () => {
           throw new Error("Dữ liệu đơn hàng không hợp lệ");
         }
 
-        // Normalize orders with invalid shippingStatus or returnStatus
         const normalizedOrders = data.map((order) => ({
           ...order,
           shippingStatus: ["pending", "in_transit", "delivered", "returned", "cancelled"].includes(order.shippingStatus)
@@ -297,7 +306,6 @@ const OrderPage: React.FC = () => {
       const englishStatus =
         reverseShippingStatusMapping[newStatus as keyof typeof reverseShippingStatusMapping] || newStatus;
       if (englishStatus === "cancelled") {
-        // Redirect to cancel flow for "Hủy đơn hàng"
         if (currentStatus !== "pending") {
           showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý", "error");
           return;
@@ -334,6 +342,12 @@ const OrderPage: React.FC = () => {
     let englishStatus: string;
     let updatePayload: { shippingStatus?: string; paymentStatus?: string; returnStatus?: string; cancelReason?: string };
 
+    const order = orders.find((o) => o._id === orderId);
+    if (!order) {
+      showNotification("Không tìm thấy đơn hàng", "error");
+      return;
+    }
+
     if (type === "shipping") {
       englishStatus = reverseShippingStatusMapping[newStatus as keyof typeof reverseShippingStatusMapping] || newStatus;
       updatePayload = { shippingStatus: englishStatus };
@@ -347,7 +361,11 @@ const OrderPage: React.FC = () => {
         showNotification("Vui lòng chọn hoặc nhập lý do hủy đơn hàng", "error");
         return;
       }
-      updatePayload = { shippingStatus: englishStatus, paymentStatus: "cancelled", cancelReason: finalCancelReason };
+      updatePayload = {
+        shippingStatus: englishStatus,
+        cancelReason: finalCancelReason,
+        ...(order.paymentStatus === "completed" && { paymentStatus: "cancelled" }),
+      };
     } else {
       englishStatus = reverseReturnStatusMapping[newStatus as keyof typeof reverseReturnStatusMapping] || newStatus;
       updatePayload = { returnStatus: englishStatus };
@@ -383,16 +401,16 @@ const OrderPage: React.FC = () => {
         throw new Error(`Lỗi API: ${response.status} ${errorText}`);
       }
 
-      const { order }: { order: Order } = await response.json();
+      const { order: updatedOrder }: { order: Order } = await response.json();
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
           o._id === orderId
             ? {
                 ...o,
-                shippingStatus: order.shippingStatus,
-                paymentStatus: order.paymentStatus,
-                returnStatus: order.returnStatus,
-                cancelReason: order.cancelReason,
+                shippingStatus: updatedOrder.shippingStatus,
+                paymentStatus: updatedOrder.paymentStatus,
+                returnStatus: updatedOrder.returnStatus,
+                cancelReason: updatedOrder.cancelReason,
               }
             : o
         )
@@ -402,10 +420,10 @@ const OrderPage: React.FC = () => {
           o._id === orderId
             ? {
                 ...o,
-                shippingStatus: order.shippingStatus,
-                paymentStatus: order.paymentStatus,
-                returnStatus: order.returnStatus,
-                cancelReason: order.cancelReason,
+                shippingStatus: updatedOrder.shippingStatus,
+                paymentStatus: updatedOrder.paymentStatus,
+                returnStatus: updatedOrder.returnStatus,
+                cancelReason: updatedOrder.cancelReason,
               }
             : o
         )
@@ -420,7 +438,7 @@ const OrderPage: React.FC = () => {
       );
       setCancelReasonInput("");
       setSelectedCancelReason("");
-      setSelectedOrderId(null); // Close details modal after successful update
+      setSelectedOrderId(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định";
       showNotification(`Không thể cập nhật trạng thái: ${errorMessage}`, "error");
@@ -601,27 +619,29 @@ const OrderPage: React.FC = () => {
       )}
       <div className={styles.titleContainer}>
         <h1>QUẢN LÝ ĐƠN HÀNG</h1>
-        <div className={styles.filterContainer}>
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên, ID đơn hàng hoặc địa chỉ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={styles.searchInput}
-            aria-label="Tìm kiếm đơn hàng"
-          />
-          <select
-            value={shippingStatusFilter}
-            onChange={(e) => setShippingStatusFilter(e.target.value)}
-            className={styles.categorySelect}
-            aria-label="Lọc theo trạng thái vận chuyển"
-          >
-            {allStatuses.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
+        <div className={styles.hideOnMobile}>
+          <div className={styles.filterContainer}>
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên, ID đơn hàng hoặc địa chỉ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={styles.searchInput}
+              aria-label="Tìm kiếm đơn hàng"
+            />
+            <select
+              value={shippingStatusFilter}
+              onChange={(e) => setShippingStatusFilter(e.target.value)}
+              className={styles.categorySelect}
+              aria-label="Lọc theo trạng thái vận chuyển"
+            >
+              {allStatuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
       <div className={styles.tableContainer}>
@@ -840,25 +860,26 @@ const OrderPage: React.FC = () => {
                   />
                 )}
                 <p style={{ marginTop: "10px" }}>
-                  Trạng thái thanh toán sẽ được cập nhật thành <strong>Chưa thanh toán</strong>.
+                  Trạng thái thanh toán sẽ được cập nhật thành{" "}
+                 {orders.find((o) => o._id === showConfirm.orderId)?.paymentStatus === "completed" ? "Hoàn tiền" : "giữ nguyên"}.
                 </p>
               </>
             ) : (
               <p>
                 Bạn có chắc chắn muốn{" "}
                 {showConfirm.type === "shipping"
-                  ? `chuyển trạng thái vận chuyển sang <strong>${showConfirm.newStatus}</strong>`
-                  : `chuyển trạng thái hoàn hàng sang <strong>${showConfirm.newStatus}</strong>`}?
+                  ? `chuyển trạng thái vận chuyển sang ${showConfirm.newStatus}`
+                  : `chuyển trạng thái hoàn hàng sang ${showConfirm.newStatus}`}?
                 {showConfirm.type === "shipping" && showConfirm.newStatus === "Đã giao hàng" && (
                   <>
                     <br />
-                    Trạng thái thanh toán sẽ được cập nhật thành <strong>Đã thanh toán</strong>.
+                    Trạng thái thanh toán sẽ được cập nhật thành Đã thanh toán.
                   </>
                 )}
                 {showConfirm.type === "return" && showConfirm.newStatus === "Đã chấp nhận" && (
                   <>
                     <br />
-                    Trạng thái vận chuyển sẽ được cập nhật thành <strong>Hoàn hàng</strong> và trạng thái thanh toán sẽ được cập nhật thành <strong>Chưa thanh toán</strong>.
+                    Trạng thái vận chuyển sẽ được cập nhật thành Hoàn hàng và trạng thái thanh toán sẽ được cập nhật thành  Hoàn tiền  .
                   </>
                 )}
               </p>
@@ -895,11 +916,9 @@ const OrderPage: React.FC = () => {
         </div>
       )}
       {selectedOrder && (
-        
         <div className={styles.modalOverlay} onClick={handleOverlayClick}>
-          
           <div className={styles.modaldetail} style={{ maxHeight: "80vh", overflowY: "auto" }}>
-               <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
+            <div className={styles.modalActions} style={{ justifyContent: "flex-end" }}>
               <button
                 className={styles.cancelBtn}
                 onClick={handleCloseDetails}
@@ -912,19 +931,18 @@ const OrderPage: React.FC = () => {
             </div>
             <h2>Chi tiết đơn hàng</h2>
             <div className={styles.orderDetails}>
-              
               <div className={styles.detailsContainer}>
                 <div className={styles.detailsSection}>
                   <h4>Thông tin khách hàng</h4>
                   <div className={styles.detailsGrid}>
                     <p>
-                      <strong>Tên:</strong> {selectedOrder.user?.username || "Không xác định"}
+                       Tên:   {selectedOrder.user?.username || "Không xác định"}
                     </p>
                     <p>
-                      <strong>Email:</strong> {selectedOrder.user?.email || "Không xác định"}
+                       Email:   {selectedOrder.user?.email || "Không xác định"}
                     </p>
                     <p>
-                      <strong>Địa chỉ:</strong> {formatAddress(selectedOrder.address)}
+                       Địa chỉ:   {formatAddress(selectedOrder.address)}
                     </p>
                   </div>
                 </div>
@@ -932,18 +950,18 @@ const OrderPage: React.FC = () => {
                   <h4>Thông tin đơn hàng</h4>
                   <div className={styles.detailsGrid}>
                     <p>
-                      <strong>Ngày:</strong> {formatDate(selectedOrder.createdAt)}
+                       Ngày:   {formatDate(selectedOrder.createdAt)}
                     </p>
                     <p>
-                      <strong>Trạng thái thanh toán:</strong>{" "}
+                       Trạng thái thanh toán:  {" "}
                       {getVietnamesePaymentStatus(selectedOrder.paymentStatus)}
                     </p>
                     <p>
-                      <strong>Trạng thái vận chuyển:</strong>{" "}
+                       Trạng thái vận chuyển:  {" "}
                       {getVietnameseShippingStatus(selectedOrder.shippingStatus)}
                     </p>
                     <p>
-                      <strong>Phương thức thanh toán:</strong>{" "}
+                       Phương thức thanh toán:  {" "}
                       {selectedOrder.paymentMethod === "cod"
                         ? "Thanh toán khi nhận hàng"
                         : selectedOrder.paymentMethod === "bank"
@@ -952,7 +970,7 @@ const OrderPage: React.FC = () => {
                     </p>
                     {selectedOrder.cancelReason && (
                       <p>
-                        <strong>Lý do hủy đơn:</strong> {selectedOrder.cancelReason}
+                         Lý do hủy đơn:   {getVietnameseCancelReason(selectedOrder.cancelReason)}
                       </p>
                     )}
                   </div>
@@ -961,12 +979,12 @@ const OrderPage: React.FC = () => {
                   <h4>Trạng thái hoàn hàng</h4>
                   <div className={styles.detailsGrid}>
                     <p>
-                      <strong>Trạng thái:</strong>{" "}
+                       Trạng thái:  {" "}
                       {getVietnameseReturnStatus(selectedOrder.returnStatus)}
                     </p>
                     {selectedOrder.returnReason && (
                       <p>
-                        <strong>Lý do hoàn hàng:</strong> {selectedOrder.returnReason}
+                         Lý do hoàn hàng:   {selectedOrder.returnReason}
                       </p>
                     )}
                     {selectedOrder.returnStatus === "requested" && (
@@ -1005,7 +1023,6 @@ const OrderPage: React.FC = () => {
                         <th>Hình ảnh</th>
                         <th>Tên sản phẩm</th>
                         <th>Số lượng</th>
-                        <th>Giá</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1026,7 +1043,6 @@ const OrderPage: React.FC = () => {
                             </td>
                             <td>{item.product?.name || "Không xác định"}</td>
                             <td>{item.quantity}</td>
-                            <td>{getProductPrice(item.product, item.optionId).toLocaleString()}₫</td>
                           </tr>
                         ))
                       ) : (
@@ -1045,7 +1061,6 @@ const OrderPage: React.FC = () => {
                 </div>
               </div>
             </div>
-         
           </div>
         </div>
       )}

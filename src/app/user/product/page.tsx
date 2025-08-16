@@ -10,7 +10,6 @@ import { Product } from "@/app/components/product_interface";
 import ToastNotification from "../ToastNotification/ToastNotification";
 import ScrollInView from "../../components/ScrollInView";
 
-
 const API_BASE_URL: string = "https://api-zeal.onrender.com";
 const ERROR_IMAGE_URL: string = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
 
@@ -59,7 +58,6 @@ const isCategory = (id_category: Category | string | null | undefined): id_categ
   return id_category != null && typeof id_category === "object" && "_id" in id_category;
 };
 
-// Di chuyển useToast lên trước ProductPage
 const useToast = () => {
   const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
   const TOAST_DURATION: number = 3000;
@@ -94,7 +92,6 @@ export default function ProductPage() {
   const searchQuery: string = searchParams.get("query")?.toLowerCase() || "";
   const { message, showToast, hideToast } = useToast();
 
-  // Hàm gọi API
   const apiRequest = async (url: string, options: RequestInit) => {
     const token = localStorage.getItem("token");
     const headers = {
@@ -110,7 +107,6 @@ export default function ProductPage() {
     return response.json();
   };
 
-  // Hàm addToCart
   const addToCart = useCallback(
     async (product: Product) => {
       if (!product || !product.option?.length) {
@@ -118,8 +114,8 @@ export default function ProductPage() {
         return;
       }
 
-      const selectedOption = product.option[0]; // Mặc định chọn tùy chọn đầu tiên
-      const quantity = 1; // Mặc định số lượng là 1
+      const selectedOption = product.option[0];
+      const quantity = 1;
       const userId = localStorage.getItem("userId");
 
       if (selectedOption.stock < quantity) {
@@ -180,12 +176,10 @@ export default function ProductPage() {
     [showToast]
   );
 
-  // Tạo cacheBuster sau khi hydration
   useEffect(() => {
     setCacheBuster(`t=${Date.now()}`);
   }, []);
 
-  // Load initial favorites from localStorage
   useEffect(() => {
     const savedFavorites = localStorage.getItem("favoriteProducts");
     if (savedFavorites) {
@@ -193,7 +187,6 @@ export default function ProductPage() {
     }
   }, []);
 
-  // Fetch brands
   useEffect(() => {
     const fetchBrands = async () => {
       try {
@@ -211,7 +204,6 @@ export default function ProductPage() {
     fetchBrands();
   }, []);
 
-  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
@@ -246,7 +238,6 @@ export default function ProductPage() {
     if (brands.length > 0) fetchProducts();
   }, [brands]);
 
-  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -266,7 +257,6 @@ export default function ProductPage() {
     fetchCategories();
   }, []);
 
-  // Fetch favorite products from API - Fixed dependency array
   useEffect(() => {
     const fetchFavoriteProducts = async () => {
       const token = localStorage.getItem("token");
@@ -318,9 +308,8 @@ export default function ProductPage() {
       }
     };
     fetchFavoriteProducts();
-  }, []); // Removed showToast from dependency array
+  }, []);
 
-  // Apply category filter from URL
   useEffect(() => {
     const categoryFromUrl = searchParams.get("category");
     if (!categoryFromUrl) {
@@ -352,7 +341,6 @@ export default function ProductPage() {
     setCurrentPage(1);
   }, [searchParams, products, categories]);
 
-  // Apply sidebar filters (category, brand, price, search)
   useEffect(() => {
     let filtered: Product[] = [...products];
     if (activeCategory) {
@@ -518,231 +506,280 @@ export default function ProductPage() {
     return favoriteProducts.includes(productId);
   };
 
-  return (
+  // Hàm để tạo danh sách các số trang hiển thị
+  const getPageNumbers = () => {
+    const maxPagesToShow = 5;
+    const pages: (number | string)[] = [];
+    const startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
+    if (startPage > 1) {
+      pages.push(1);
+      if (startPage > 2) pages.push("...");
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
+  return (
     <div>
       <ScrollInView>
-      <section className={styles.productBanner}>
-        <img src="/images/productBanner.png" alt="Banner" className={styles["banner-image"]} />
-      </section>
+        <section className={styles.productBanner}>
+          <img src="/images/productBanner.png" alt="Banner" className={styles["banner-image"]} />
+        </section>
       </ScrollInView>
       <ScrollInView>
-      <h1 className={styles["product-main-title"]}>Danh sách sản phẩm</h1>
+        <h1 className={styles["product-main-title"]}>Danh sách sản phẩm</h1>
       </ScrollInView>
 
       <ScrollInView>
-      <div className={styles.containerBox}>
-        <aside className={styles.productSidebar}>
-          <h3 className={styles["sidebar-title"]}>DANH MỤC SẢN PHẨM</h3>
-          <hr />
-          <ul className={styles["menu-list"]}>
-            {categories.length > 0 ? (
-              categories
-                .filter(category => category.status === "show")
-                .map(category => (
-                  <li
-                    key={category._id}
-                    className={styles["menu-list-item"]}
-                    onClick={() => filterProducts(category.name)}
-                  >
+        <div className={styles.containerBox}>
+          <aside className={styles.productSidebar}>
+            <h3 className={styles["sidebar-title"]}>DANH MỤC SẢN PHẨM</h3>
+            <hr />
+            <ul className={styles["menu-list"]}>
+              {categories.length > 0 ? (
+                categories
+                  .filter(category => category.status === "show")
+                  .map(category => (
+                    <li
+                      key={category._id}
+                      className={styles["menu-list-item"]}
+                      onClick={() => filterProducts(category.name)}
+                    >
+                      <span
+                        className={`${styles.filterOption} ${
+                          activeCategory === category.name ? styles.active : ""
+                        }`}
+                      >
+                        {category.name}
+                      </span>
+                    </li>
+                  ))
+              ) : (
+                <li className={styles["no-products"]}>Không có danh mục nào.</li>
+              )}
+            </ul>
+
+            <h3 className={styles["sidebar-title"]}>THƯƠNG HIỆU</h3>
+            <hr />
+            <ul className={styles.filterList}>
+              {brands
+                .filter(brand => brand.status === "show")
+                .map(brand => (
+                  <li key={brand._id} className={styles.filterItem}>
                     <span
                       className={`${styles.filterOption} ${
-                        activeCategory === category.name ? styles.active : ""
+                        selectedBrands.includes(brand.name) ? styles.active : ""
                       }`}
+                      onClick={() =>
+                        setSelectedBrands(prev =>
+                          prev.includes(brand.name)
+                            ? prev.filter(b => b !== brand.name)
+                            : [...prev, brand.name]
+                        )
+                      }
                     >
-                      {category.name}
+                      {brand.name}
                     </span>
                   </li>
-                ))
-            ) : (
-              <li className={styles["no-products"]}>Không có danh mục nào.</li>
-            )}
-          </ul>
+                ))}
+            </ul>
 
-          <h3 className={styles["sidebar-title"]}>THƯƠNG HIỆU</h3>
-          <hr />
-          <ul className={styles.filterList}>
-            {brands
-              .filter(brand => brand.status === "show")
-              .map(brand => (
-                <li key={brand._id} className={styles.filterItem}>
+            <h3 className={styles["sidebar-title"]}>PHÂN KHÚC SẢN PHẨM</h3>
+            <hr />
+            <ul className={styles.filterList}>
+              {PRICE_RANGES.map(range => (
+                <li key={range.value} className={styles.filterItem}>
                   <span
                     className={`${styles.filterOption} ${
-                      selectedBrands.includes(brand.name) ? styles.active : ""
+                      selectedPriceRange === range.value ? styles.active : ""
                     }`}
                     onClick={() =>
-                      setSelectedBrands(prev =>
-                        prev.includes(brand.name)
-                          ? prev.filter(b => b !== brand.name)
-                          : [...prev, brand.name]
-                      )
+                      setSelectedPriceRange(selectedPriceRange === range.value ? "" : range.value)
                     }
                   >
-                    {brand.name}
+                    {range.label}
                   </span>
                 </li>
               ))}
-          </ul>
-
-          <h3 className={styles["sidebar-title"]}>PHÂN KHÚC SẢN PHẨM</h3>
-          <hr />
-          <ul className={styles.filterList}>
-            {PRICE_RANGES.map(range => (
-              <li key={range.value} className={styles.filterItem}>
-                <span
-                  className={`${styles.filterOption} ${
-                    selectedPriceRange === range.value ? styles.active : ""
-                  }`}
-                  onClick={() =>
-                    setSelectedPriceRange(selectedPriceRange === range.value ? "" : range.value)
-                  }
-                >
-                  {range.label}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </aside>
-        <section className={styles.productContainer}>
-          {error ? (
-            <p className={styles["no-products"]}>{error}</p>
-          ) : isLoading ? (
-            <p className={styles["no-products"]}>Đang tải sản phẩm...</p>
-          ) : currentProducts.length > 0 ? (
-            <div className={styles.productGrid}>
-              {currentProducts.map(product => (
-                <Link
-                  href={`/user/detail/${product.slug}`}
-                  key={product._id}
-                  className={`${styles.productItem} ${styles["product-link"]}`}
-                >
-                  <div>
-                    <Image
-                      src={
-                        product.images && product.images.length > 0
-                          ? `${getImageUrl(product.images[0])}?${cacheBuster}`
-                          : ERROR_IMAGE_URL
-                      }
-                      alt={product?.name || "Sản phẩm"}
-                      width={300}
-                      height={200}
-                      quality={100}
-                      className={styles["product-image"]}
-                      onError={(e) => {
-                        console.log(`Image load failed for ${product.name}, switched to 404 fallback`);
-                        (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
-                      }}
-                    />
-                    <div className={styles["product-details"]}>
-                      <h4 className={styles["product-item-name"]}>{product?.name || "Tên sản phẩm"}</h4>
-                      <div className={styles["product-card"]}>
-                        <p className={styles.price}>{formatPrice(product?.price)}</p>
-                        <div className={styles.actionIcons}>
-                          <span
-                            title={
-                              isProductInWishlist(product._id)
-                                ? "Xóa khỏi danh sách yêu thích"
-                                : "Thêm vào danh sách yêu thích"
-                            }
-                            className={`${styles.wishlistIcon} ${
-                              isProductInWishlist(product._id) ? styles.favorited : ""
-                            }`}
-                            onClick={e => {
-                              e.preventDefault();
-                              addToWishlist(product._id);
-                            }}
-                          >
-                            <i className="fas fa-heart"></i>
-                          </span>
-                          <span
-                            title="Thêm vào Giỏ Hàng"
-                            className={`${styles.cartIcon} ${addingToCart ? styles.disabled : ""}`}
-                            onClick={e => {
-                              e.preventDefault();
-                              if (!addingToCart) addToCart(product);
-                            }}
-                          >
-                            <i className="fas fa-shopping-cart"></i>
-                          </span>
+            </ul>
+          </aside>
+          <section className={styles.productContainer}>
+            {error ? (
+              <p className={styles["no-products"]}>{error}</p>
+            ) : isLoading ? (
+              <p className={styles["no-products"]}>Đang tải sản phẩm...</p>
+            ) : currentProducts.length > 0 ? (
+              <div className={styles.productGrid}>
+                {currentProducts.map(product => (
+                  <Link
+                    href={`/user/detail/${product.slug}`}
+                    key={product._id}
+                    className={`${styles.productItem} ${styles["product-link"]}`}
+                  >
+                    <div>
+                      <Image
+                        src={
+                          product.images && product.images.length > 0
+                            ? `${getImageUrl(product.images[0])}?${cacheBuster}`
+                            : ERROR_IMAGE_URL
+                        }
+                        alt={product?.name || "Sản phẩm"}
+                        width={300}
+                        height={200}
+                        quality={100}
+                        className={styles["product-image"]}
+                        onError={(e) => {
+                          console.log(`Image load failed for ${product.name}, switched to 404 fallback`);
+                          (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
+                        }}
+                      />
+                      <div className={styles["product-details"]}>
+                        <h4 className={styles["product-item-name"]}>{product?.name || "Tên sản phẩm"}</h4>
+                        <div className={styles["product-card"]}>
+                          <p className={styles.price}>{formatPrice(product?.price)}</p>
+                          <div className={styles.actionIcons}>
+                            <span
+                              title={
+                                isProductInWishlist(product._id)
+                                  ? "Xóa khỏi danh sách yêu thích"
+                                  : "Thêm vào danh sách yêu thích"
+                              }
+                              className={`${styles.wishlistIcon} ${
+                                isProductInWishlist(product._id) ? styles.favorited : ""
+                              }`}
+                              onClick={e => {
+                                e.preventDefault();
+                                addToWishlist(product._id);
+                              }}
+                            >
+                              <i className="fas fa-heart"></i>
+                            </span>
+                            <span
+                              title="Thêm vào Giỏ Hàng"
+                              className={`${styles.cartIcon} ${addingToCart ? styles.disabled : ""}`}
+                              onClick={e => {
+                                e.preventDefault();
+                                if (!addingToCart) addToCart(product);
+                              }}
+                            >
+                              <i className="fas fa-shopping-cart"></i>
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className={styles["no-products"]}>
-              {searchQuery
-                ? `Không tìm thấy sản phẩm với từ khóa "${searchQuery}"`
-                : activeCategory
-                ? `Không tìm thấy sản phẩm trong danh mục "${activeCategory}"`
-                : "Không có sản phẩm nào."}
-            </p>
-          )}
-          {totalPages > 1 && (
-            <div className={styles.productPagination}>
-              <button
-                type="button"
-                title="Trang trước"
-                className={`${styles["page-btn"]} ${currentPage === 1 ? styles.disabled : ""}`}
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage + 1)}
-              >
-                <i className="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                <span className="sr-only">Trang sau</span>
-              </button>
-            </div>
-          )}
-        </section>
-      </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className={styles["no-products"]}>
+                {searchQuery
+                  ? `Không tìm thấy sản phẩm với từ khóa "${searchQuery}"`
+                  : activeCategory
+                  ? `Không tìm thấy sản phẩm trong danh mục "${activeCategory}"`
+                  : "Không có sản phẩm nào."}
+              </p>
+            )}
+            {totalPages > 1 && (
+              <div className={styles.productPagination}>
+                <button
+                  type="button"
+                  title="Trang trước"
+                  className={`${styles["page-btn"]} ${currentPage === 1 ? styles.disabled : ""}`}
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                >
+                  <i className="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                  <span className="sr-only">Trang trước</span>
+                </button>
+                {getPageNumbers().map((page, index) => (
+                  <span key={index}>
+                    {typeof page === "string" ? (
+                      <span className={styles.ellipsis}>...</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${styles["page-btn"]} ${page === currentPage ? styles.active : ""}`}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                        <span className="sr-only">Trang {page}</span>
+                      </button>
+                    )}
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  title="Trang sau"
+                  className={`${styles["page-btn"]} ${currentPage === totalPages ? styles.disabled : ""}`}
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                >
+                  <i className="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                  <span className="sr-only">Trang sau</span>
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
       </ScrollInView>
 
       <ScrollInView>
-      <div className={styles["best-selling-products"]}>
-        <h3 className={styles["slider-title"]}>Có thể bạn sẽ thích</h3>
-        <div className={styles["best-selling-grid"]}>
-          {bestSellingProducts.length > 0 ? (
-            bestSellingProducts.map(product => (
-              <Link
-                href={`/user/detail/${product.slug}`}
-                key={product._id}
-                className={styles["best-selling-link"]}
-              >
-                <div className={styles["best-selling-card"]}>
-                  <div className={styles["best-selling-badge"]}>Sale</div>
-                  <div className={styles["best-selling-image"]}>
-                    <Image
-                      src={
-                        product.images?.[0]
-                          ? `${getImageUrl(product.images[0])}?${cacheBuster}`
-                          : ERROR_IMAGE_URL
-                      }
-                      alt={product?.name || "Sản phẩm"}
-                      width={200}
-                      height={200}
-                      quality={100}
-                      className={styles["best-selling-product-image"]}
-                      onError={(e) => {
-                        console.log(`Best Selling ${product.name} image load failed, switched to 404 fallback`);
-                        (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
-                      }}
-                    />
+        <div className={styles["best-selling-products"]}>
+          <h3 className={styles["slider-title"]}>Có thể bạn sẽ thích</h3>
+          <div className={styles["best-selling-grid"]}>
+            {bestSellingProducts.length > 0 ? (
+              bestSellingProducts.map(product => (
+                <Link
+                  href={`/user/detail/${product.slug}`}
+                  key={product._id}
+                  className={styles["best-selling-link"]}
+                >
+                  <div className={styles["best-selling-card"]}>
+                    <div className={styles["best-selling-badge"]}>Sale</div>
+                    <div className={styles["best-selling-image"]}>
+                      <Image
+                        src={
+                          product.images?.[0]
+                            ? `${getImageUrl(product.images[0])}?${cacheBuster}`
+                            : ERROR_IMAGE_URL
+                        }
+                        alt={product?.name || "Sản phẩm"}
+                        width={200}
+                        height={200}
+                        quality={100}
+                        className={styles["best-selling-product-image"]}
+                        onError={(e) => {
+                          console.log(`Best Selling ${product.name} image load failed, switched to 404 fallback`);
+                          (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
+                        }}
+                      />
+                    </div>
+                    <div className={styles["best-selling-details"]}>
+                      <h3 className={styles["best-selling-product-name"]}>
+                        {product?.name || "Tên sản phẩm"}
+                      </h3>
+                      <p className={styles["best-selling-price"]}>{formatPrice(product?.price)}</p>
+                    </div>
                   </div>
-                  <div className={styles["best-selling-details"]}>
-                    <h3 className={styles["best-selling-product-name"]}>
-                      {product?.name || "Tên sản phẩm"}
-                    </h3>
-                    <p className={styles["best-selling-price"]}>{formatPrice(product?.price)}</p>
-                  </div>
-                </div>
-              </Link>
-            ))
-          ) : (
-            <p className={styles["no-products"]}>Đang tải sản phẩm...</p>
-          )}
+                </Link>
+              ))
+            ) : (
+              <p className={styles["no-products"]}>Đang tải sản phẩm...</p>
+            )}
+          </div>
         </div>
-      </div>
       </ScrollInView>
       {message && (
         <ToastNotification

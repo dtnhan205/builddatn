@@ -1301,7 +1301,6 @@ const AD_Home: React.FC = () => {
                 <tr>
                   <th>Người dùng</th>
                   <th>Sản phẩm</th>
-                  <th>Nội dung</th>
                   <th>Số sao</th>
                 </tr>
               </thead>
@@ -1383,7 +1382,6 @@ const AD_Home: React.FC = () => {
                           : "Người dùng không tồn tại"}
                       </td>
                       <td>{comment.product?.name || "Sản phẩm không tồn tại"}</td>
-                      <td>{comment.content}</td>
                       <td>{renderStars(comment.rating)}</td>
                     </tr>
                   ))
@@ -1472,14 +1470,6 @@ const AD_Home: React.FC = () => {
                 return (
                   <>
                     <h2>Chi tiết Đánh giá</h2>
-                    <button
-                      className={styles.cancelBtn}
-                      onClick={closeCommentDetails}
-                      title="Đóng"
-                      aria-label="Đóng chi tiết đánh giá"
-                    >
-                      <FontAwesomeIcon icon={faTimes} />
-                    </button>
                     <div className={styles.commentDetails}>
                       <div className={styles.detailsContainer}>
                         <div className={styles.detailsSection}>
@@ -1507,12 +1497,7 @@ const AD_Home: React.FC = () => {
                             <p>
                               <strong>Tên sản phẩm:</strong> {comment.product?.name || "Không có"}
                             </p>
-                            <p>
-                              <strong>Giá:</strong>{" "}
-                              {comment.product?.price
-                                ? comment.product.price.toLocaleString() + "₫"
-                                : "Không có"}
-                            </p>
+                          
                           </div>
                         </div>
                         <div className={styles.detailsSection}>
