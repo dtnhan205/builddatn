@@ -206,7 +206,7 @@
 }
 
 .recentOrders {
-  flex: 0 0 60%;
+  flex: 0 0 65%;
   background: white;
   border-radius: 12px;
   padding: 2rem;
@@ -214,7 +214,7 @@
 }
 
 .recentComments {
-  flex: 0 0 40%;
+  flex: 0 0 35%;
   background: white;
   border-radius: 12px;
   padding: 2rem;
@@ -396,9 +396,9 @@
 }
 
 .paginationButton.active {
-  background: #3b82f6;
+  background: #4CAF50;
   color: white;
-  border-color: #3b82f6;
+  border-color: #4CAF50;
 }
 
 .paginationButton:disabled {
@@ -463,12 +463,21 @@
   z-index: 1000;
 }
 
-.modalContent, .modalhuy {
+.modalContent {
   background: white;
   border-radius: 12px;
   padding: 2rem;
   width: 90%;
   max-width: 500px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+.modalhuy {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 340px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   position: relative;
 }

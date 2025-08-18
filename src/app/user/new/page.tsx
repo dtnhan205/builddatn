@@ -8,7 +8,6 @@ import styles from "./new.module.css";
 import ScrollInView from "../../components/ScrollInView";
 export const dynamic = "force-dynamic";
 
-
 interface NewsItem {
   _id: string;
   title: string;
@@ -111,172 +110,170 @@ export default function NewsPage() {
 
   return (
     <>
-    <ScrollInView>
-      {}
-      {bannerLoading ? (
-        <p>Đang tải banner...</p>
-      ) : bannerError ? (
-        <p className={styles.errorContainer}>Lỗi: {bannerError}</p>
-      ) : (
-        <img
-          src={getImageUrl(banner)}
-          alt="Banner"
-          className={styles.banner}
-          loading="lazy"
-          onError={(e) => {
-            setBannerError("Không thể tải hình ảnh banner.");
-            (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
-          }}
-        />
+      {(loading || bannerLoading) && (
+        <div className={styles.loaderContainer}>
+          <div className={styles.loader}></div>
+        </div>
       )}
+      <ScrollInView>
+        {bannerLoading ? (
+          <p>Đang tải banner...</p>
+        ) : bannerError ? (
+          <p className={styles.errorContainer}>Lỗi: {bannerError}</p>
+        ) : (
+          <img
+            src={getImageUrl(banner)}
+            alt="Banner"
+            className={styles.banner}
+            loading="lazy"
+            onError={(e) => {
+              setBannerError("Không thể tải hình ảnh banner.");
+              (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+            }}
+          />
+        )}
       </ScrollInView>
 
       <ScrollInView>
-
-      <section className={styles.namePage}>
-        <p className={styles.nameTagPage}>
-          <strong>Tin Tức</strong>
-        </p>
-      </section>
+        <section className={styles.namePage}>
+          <p className={styles.nameTagPage}>
+            <strong>Tin Tức</strong>
+          </p>
+        </section>
       </ScrollInView>
-      
 
       <section className={styles.container}>
         <ScrollInView>
-        <p className={styles.sectionTitle}>
-          <strong>Tin Tức Nổi Bật</strong>
-        </p>
-        <p className={styles.herro}>
-          Cùng nhau khám phá xu hướng làm đẹp mới nhất cùng
-          <br />
-          Pure Botanica
-        </p>
+          <p className={styles.sectionTitle}>
+            <strong>Tin Tức Nổi Bật</strong>
+          </p>
+          <p className={styles.herro}>
+            Cùng nhau khám phá xu hướng làm đẹp mới nhất cùng
+            <br />
+            Pure Botanica
+          </p>
         </ScrollInView>
 
         <ScrollInView>
-        <section className={styles.hotNewPage}>
-          {highlightedNews.map((item) => (
-            <Link href={`/user/newdetail/${item.slug}`} key={item._id}>
-              <div className={styles.hotNew}>
-                {imageErrors[item._id] ? (
-                  <div className={styles.imageError}>{imageErrors[item._id]}</div>
-                ) : (
-                  <img
-                    src={getImageUrl(item.thumbnailUrl)}
-                    alt={item.thumbnailCaption}
-                    className={styles.hotNewImage}
-                    onError={() => handleImageError(item._id)}
-                    loading="lazy"
-                  />
-                )}
-                <div className={styles.hotNewInfo}>
-                  <p className={styles.hotNewTitle}>
-                    <strong>{item.title}</strong>
-                  </p>
-                  <p className={styles.views}>
-                    <FontAwesomeIcon icon={faEye} /> {item.views ?? 0} lượt xem
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </section>
-        </ScrollInView>
-
-        <ScrollInView>
-
-        <h1 className={styles.sectionTitle}>
-          <strong>Tin Tức Hữu Ích</strong>
-        </h1>
-        </ScrollInView>
-
-        <ScrollInView>
-
-        <section className={styles.newsPost}>
-          {loading ? (
-            <p>Đang tải dữ liệu...</p>
-          ) : currentNews.length > 0 ? (
-            currentNews.map((item) => (
-              <div className={styles.news} key={item._id}>
-                {imageErrors[item._id] ? (
-                  <div className={styles.imageError}>{imageErrors[item._id]}</div>
-                ) : (
-                  <img
-                    src={getImageUrl(item.thumbnailUrl)}
-                    alt={item.thumbnailCaption}
-                    className={styles.newsImage}
-                    onError={() => handleImageError(item._id)}
-                    loading="lazy"
-                  />
-                )}
-                <div className={styles.tt}>
-                  <h2>
-                    <strong>{item.title}</strong>
-                  </h2>
-
-                  <div className={styles.metaInfo}>
-                    <span>
-                      <FontAwesomeIcon icon={faCalendarDays} />{" "}
-                      {item.publishedAt
-                        ? new Date(item.publishedAt).toLocaleDateString("vi-VN")
-                        : "Chưa rõ"}
-                    </span>
-                    <span>
+          <section className={styles.hotNewPage}>
+            {highlightedNews.map((item) => (
+              <Link href={`/user/newdetail/${item.slug}`} key={item._id}>
+                <div className={styles.hotNew}>
+                  {imageErrors[item._id] ? (
+                    <div className={styles.imageError}>{imageErrors[item._id]}</div>
+                  ) : (
+                    <img
+                      src={getImageUrl(item.thumbnailUrl)}
+                      alt={item.thumbnailCaption}
+                      className={styles.hotNewImage}
+                      onError={() => handleImageError(item._id)}
+                      loading="lazy"
+                    />
+                  )}
+                  <div className={styles.hotNewInfo}>
+                    <p className={styles.hotNewTitle}>
+                      <strong>{item.title}</strong>
+                    </p>
+                    <p className={styles.views}>
                       <FontAwesomeIcon icon={faEye} /> {item.views ?? 0} lượt xem
-                    </span>
+                    </p>
                   </div>
-
-                  <p
-                    className={styles.sectionDescription}
-                    dangerouslySetInnerHTML={{
-                      __html: item.content
-                        .replace(/<(?!\/?(b|strong)\b)[^>]*>/gi, "")
-                        .slice(0, 200) + "...",
-                    }}
-                  />
-                  <Link href={`/user/newdetail/${item.slug}`} className={styles.btn}>
-                    Xem Thêm <FontAwesomeIcon icon={faArrowRight} />
-                  </Link>
                 </div>
-              </div>
-            ))
-          ) : (
-            <p className={styles.noNews}>Không có tin tức nào để hiển thị.</p>
-          )}
-        </section>
-
+              </Link>
+            ))}
+          </section>
         </ScrollInView>
 
+        <ScrollInView>
+          <h1 className={styles.sectionTitle}>
+            <strong>Tin Tức Hữu Ích</strong>
+          </h1>
+        </ScrollInView>
+
+        <ScrollInView>
+          <section className={styles.newsPost}>
+            {loading ? (
+              <p>Đang tải dữ liệu...</p>
+            ) : currentNews.length > 0 ? (
+              currentNews.map((item) => (
+                <div className={styles.news} key={item._id}>
+                  {imageErrors[item._id] ? (
+                    <div className={styles.imageError}>{imageErrors[item._id]}</div>
+                  ) : (
+                    <img
+                      src={getImageUrl(item.thumbnailUrl)}
+                      alt={item.thumbnailCaption}
+                      className={styles.newsImage}
+                      onError={() => handleImageError(item._id)}
+                      loading="lazy"
+                    />
+                  )}
+                  <div className={styles.tt}>
+                    <h2>
+                      <strong>{item.title}</strong>
+                    </h2>
+
+                    <div className={styles.metaInfo}>
+                      <span>
+                        <FontAwesomeIcon icon={faCalendarDays} />{" "}
+                        {item.publishedAt
+                          ? new Date(item.publishedAt).toLocaleDateString("vi-VN")
+                          : "Chưa rõ"}
+                      </span>
+                      <span>
+                        <FontAwesomeIcon icon={faEye} /> {item.views ?? 0} lượt xem
+                      </span>
+                    </div>
+
+                    <p
+                      className={styles.sectionDescription}
+                      dangerouslySetInnerHTML={{
+                        __html: item.content
+                          .replace(/<(?!\/?(b|strong)\b)[^>]*>/gi, "")
+                          .slice(0, 200) + "...",
+                      }}
+                    />
+                    <Link href={`/user/newdetail/${item.slug}`} className={styles.btn}>
+                      Xem Thêm <FontAwesomeIcon icon={faArrowRight} />
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className={styles.noNews}>Không có tin tức nào để hiển thị.</p>
+            )}
+          </section>
+        </ScrollInView>
 
         {totalPages > 1 && (
           <ScrollInView>
-          <section className={styles.pagination}>
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={styles.pageButton}
-            >
-              Trang trước
-            </button>
-            {Array.from({ length: totalPages }, (_, index) => (
+            <section className={styles.pagination}>
               <button
-                key={index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className={`${styles.pageButton} ${
-                  currentPage === index + 1 ? styles.activePage : ""
-                }`}
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={styles.pageButton}
               >
-                {index + 1}
+                Trang trước
               </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={styles.pageButton}
-            >
-              Trang sau
-            </button>
-          </section>
+              {Array.from({ length: totalPages }, (_, index) => (
+                <button
+                  key={index + 1}
+                  onClick={() => handlePageChange(index + 1)}
+                  className={`${styles.pageButton} ${
+                    currentPage === index + 1 ? styles.activePage : ""
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={styles.pageButton}
+              >
+                Trang sau
+              </button>
+            </section>
           </ScrollInView>
         )}
       </section>

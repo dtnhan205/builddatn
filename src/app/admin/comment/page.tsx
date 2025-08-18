@@ -521,12 +521,6 @@ const CommentPage: React.FC = () => {
                       <strong>Tên sản phẩm:</strong>{" "}
                       {selectedComment.product?.name || "Không có"}
                     </p>
-                    <p>
-                      <strong>Giá:</strong>{" "}
-                      {selectedComment.product?.price
-                        ? selectedComment.product.price.toLocaleString() + "₫"
-                        : "Không có"}
-                    </p>
                   </div>
                 </div>
                 <div className={styles.detailsSection}>

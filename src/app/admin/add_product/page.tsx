@@ -345,18 +345,6 @@ const AddProduct = () => {
       <div className={styles.toolbarGroup}>
         <select
           className={styles.toolbarSelect}
-          onChange={(e) => changeFontFamily(e.target.value)}
-          defaultValue=""
-        >
-          <option value="">Font</option>
-          <option value="Arial">Arial</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Helvetica">Helvetica</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Verdana">Verdana</option>
-        </select>
-        <select
-          className={styles.toolbarSelect}
           onChange={(e) => changeFontSize(e.target.value)}
           defaultValue=""
         >

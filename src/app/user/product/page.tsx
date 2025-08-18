@@ -86,6 +86,9 @@ export default function ProductPage() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>("");
   const [addingToCart, setAddingToCart] = useState<boolean>(false);
+  const [imagesLoaded, setImagesLoaded] = useState(0); // Theo dõi số lượng hình ảnh đã tải
+  const [totalImages, setTotalImages] = useState(0); // Tổng số hình ảnh cần tải
+  const [allImagesLoaded, setAllImagesLoaded] = useState(false); // Theo dõi khi tất cả hình ảnh đã tải xong
 
   const productsPerPage: number = 9;
   const searchParams = useSearchParams();
@@ -228,6 +231,12 @@ export default function ProductPage() {
         });
         setProducts(processedProducts);
         setFilteredProducts(processedProducts);
+
+        // Đếm tổng số hình ảnh hợp lệ
+        const validImagesCount = processedProducts.reduce((acc, product) => {
+          return acc + (product.images?.filter(img => img !== ERROR_IMAGE_URL).length || 0);
+        }, 0);
+        setTotalImages(validImagesCount + (bestSellingProducts.length > 0 ? bestSellingProducts.length : 0)); // Thêm số lượng hình ảnh từ bestSelling
       } catch (error) {
         console.error("Lỗi khi tải sản phẩm:", error);
         setError("Không thể tải sản phẩm. Vui lòng thử lại sau.");
@@ -530,11 +539,42 @@ export default function ProductPage() {
     return pages;
   };
 
+  // Hàm xử lý khi hình ảnh tải xong
+  const handleImageLoad = (src: string) => {
+    if (src && src !== ERROR_IMAGE_URL) {
+      setImagesLoaded((prev) => {
+        const newCount = prev + 1;
+        console.log(`Image loaded: ${src}, Loaded: ${newCount}, Total: ${totalImages}`); // Debug log
+        if (newCount >= totalImages && !allImagesLoaded) {
+          setAllImagesLoaded(true); // Đánh dấu tất cả hình ảnh đã tải
+          setTimeout(() => {
+            setIsLoading(false); // Ẩn loader sau 2 giây
+          }, 2000);
+        }
+        return newCount;
+      });
+    }
+  };
+
   return (
     <div>
+      {isLoading && (
+        <div className={styles.loaderContainer}>
+          <div className={styles.loader}></div>
+        </div>
+      )}
       <ScrollInView>
         <section className={styles.productBanner}>
-          <img src="/images/productBanner.png" alt="Banner" className={styles["banner-image"]} />
+          <img
+            src="/images/productBanner.png"
+            alt="Banner"
+            className={styles["banner-image"]}
+            onLoad={() => handleImageLoad("/images/productBanner.png")}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
+              console.log("Banner image load failed, switched to 404 fallback");
+            }}
+          />
         </section>
       </ScrollInView>
       <ScrollInView>
@@ -639,6 +679,7 @@ export default function ProductPage() {
                         height={200}
                         quality={100}
                         className={styles["product-image"]}
+                        onLoad={() => handleImageLoad(product.images?.[0] || "")}
                         onError={(e) => {
                           console.log(`Image load failed for ${product.name}, switched to 404 fallback`);
                           (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
@@ -760,6 +801,7 @@ export default function ProductPage() {
                         height={200}
                         quality={100}
                         className={styles["best-selling-product-image"]}
+                        onLoad={() => handleImageLoad(product.images?.[0] || "")}
                         onError={(e) => {
                           console.log(`Best Selling ${product.name} image load failed, switched to 404 fallback`);
                           (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;

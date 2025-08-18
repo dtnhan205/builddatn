@@ -10,6 +10,7 @@ import { CartProvider } from "./context/CartContext";
 import SearchBar from "../components/Searchbar";
 import ImageWithFallback from "../components/ImageWithFallback";
 import ScrollToTop from "../components/ScrollToTop";
+import MobileMenuToggle from "../components/menumobile";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,7 @@ export default async function RootLayout({
                   />
                 </Link>
               </div>
-              <nav>
+              <nav className="desktop-nav">
                 <div className="menu-wrapper">
                   <Link href="/user/product" className="dropdown">
                     Sản phẩm
@@ -90,9 +91,10 @@ export default async function RootLayout({
                 <Link href="/user/about">Về chúng tôi</Link>
                 <Link href="/user/contact">Liên hệ</Link>
                 <Link href="/user/new">Tin tức</Link>
+               
               </nav>
               <div className="icons">
-                <div className="search-bar">
+                 <div className="desktop-search">
                   <SearchBar />
                 </div>
                 <Link href="/user/wishlist" title="Danh sách yêu thích">
@@ -102,6 +104,8 @@ export default async function RootLayout({
                   <i className="fa-solid fa-cart-shopping"></i>
                 </Link>
                 <UserMenu />
+                
+                <MobileMenuToggle categories={showCategories} />
               </div>
             </div>
           </header>
@@ -180,7 +184,7 @@ export default async function RootLayout({
             data-language="vi"
             async
             defer
-            data-preny-bot-id="688b301f028789fb73444172"
+            data-preny-bot-id="68a0315b620b2571ccdd98a4"
           />
         </div>
       </CartProvider>
