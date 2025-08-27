@@ -626,6 +626,7 @@ body.show-chatbot .chatbot-popup {
   display: flex;
   gap: 11px;
   align-items: center;
+  float: right;
 }
 .chat-body .message .message-content ul {
   margin: 10px 0 10px 20px; /* Thêm lề cho danh sách */
@@ -648,8 +649,7 @@ body.show-chatbot .chatbot-popup {
 
 .chat-body .message .message-text {
   padding: 12px 16px;
-  /* max-width: 75%; */
-  width: fit-content;
+  /* width: 70%; */
   display: inline-block;
   font-size: 0.95rem;
   margin-right: 2px;
@@ -668,15 +668,16 @@ body.show-chatbot .chatbot-popup {
 }
 
 .chat-body .user-message {
-  flex-direction: column;
-  align-items: flex-end;
-  margin-right: 0px;
+  align-self: flex-end; /* đẩy sát lề phải */
+  margin-right: 0;      /* bỏ khoảng cách thừa */
+  text-align: right;    /* nội dung canh phải */
 }
 
 .chat-body .user-message .message-text {
   color: #fff;
   background: #1E90FF;
   border-radius: 13px 13px 3px 13px;
+  
 }
 
 .chat-body .user-message .attachment {
@@ -936,17 +937,24 @@ body.show-emoji-picker .chat-controls #emoji-btn {
 
 .chat-form .chat-controls #send-message {
   color: #fff;
-  display: none;
-  background: #1E90FF;
+  height: 35px;
+  width: 35px;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 1.15rem;
+  background: #2c9635;
+  transition: 0.2s ease;
 }
 
 .chat-form .chat-controls #send-message:hover {
-  background: #4169E1;
+  background: #1b6622;
 }
 
 .chat-form .message-input:valid ~ .chat-controls #send-message {
   display: block;
 }
+
 
 em-emoji-picker {
   position: absolute;
@@ -1295,6 +1303,7 @@ body.show-emoji-picker em-emoji-picker {
 
   .chat-body .message .message-text {
     max-width: 80%;
+    margin-right: 0px;
     font-size: 0.9rem;
   }
 
@@ -1458,11 +1467,6 @@ body.show-emoji-picker em-emoji-picker {
   .chat-form .message-input {
     font-size: 1rem;
     padding: 12px 10px;
-  }
-
-  .chat-body .message .message-text {
-    max-width: 85%;
-    font-size: 0.9rem;
   }
 
   .chat-form .chat-controls button {
