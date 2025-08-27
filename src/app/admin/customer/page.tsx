@@ -531,7 +531,7 @@ export default function Customer() {
                   title="Lưu"
                   aria-label="Lưu thông tin khách hàng"
                 >
-                  <FontAwesomeIcon icon={faEdit} />
+                  <FontAwesomeIcon icon={faCheck} />
                 </button>
                 <button
                   type="button"

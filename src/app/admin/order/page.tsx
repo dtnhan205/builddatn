@@ -98,10 +98,6 @@ const OrderPage: React.FC = () => {
   const router = useRouter();
 
   const cancelReasons: { value: string; label: string }[] = [
-    { value: "Đổi ý không mua nữa", label: "Đổi ý không mua nữa" },
-    { value: "Muốn thay đổi sản phẩm", label: "Muốn thay đổi sản phẩm" },
-    { value: "Thay đổi phương thức thanh toán", label: "Thay đổi phương thức thanh toán" },
-    { value: "Thay đổi địa chỉ giao hàng", label: "Thay đổi địa chỉ giao hàng" },
     { value: "Lý do khác", label: "Lý do khác" },
     { value: "out_of_stock", label: "Hết hàng" },
     { value: "customer_cancelled", label: "Khách hủy" },
@@ -191,8 +187,8 @@ const OrderPage: React.FC = () => {
     { value: "in_transit", label: "Đang vận chuyển" },
     { value: "failed", label: "Giao hàng thất bại" },
     { value: "delivered", label: "Đã giao hàng" },
-    { value: "returned", label: "Hoàn hàng" },
     { value: "cancelled", label: "Hủy đơn hàng" },
+    { value: "returned", label: "Hoàn hàng" },
   ];
 
   const returnStatuses: { value: string; label: string }[] = [
@@ -801,7 +797,7 @@ const OrderPage: React.FC = () => {
           <div className={styles.filterContainer}>
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, ID đơn hàng hoặc địa chỉ..."
+              placeholder="Tìm kiếm theo tên, địa chỉ..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
@@ -918,7 +914,7 @@ const OrderPage: React.FC = () => {
                   <td>
                     {order.paymentMethod === "cod"
                       ? "Thanh toán khi nhận hàng"
-                      : order.paymentMethod === "bank"
+                      : order.paymentMethod === "Thanh toán khi nhận hàng"
                       ? "Chuyển khoản"
                       : order.paymentMethod === "vnpay"
                       ? "VNPay"
@@ -1189,12 +1185,8 @@ const OrderPage: React.FC = () => {
                       Phương thức thanh toán:{" "}
                       {selectedOrder.paymentMethod === "cod"
                         ? "Thanh toán khi nhận hàng"
-                        : selectedOrder.paymentMethod === "bank"
-                        ? "Chuyển khoản"
                         : selectedOrder.paymentMethod === "vnpay"
                         ? "VNPay"
-                        : selectedOrder.paymentMethod === "momo"
-                        ? "Momo"
                         : selectedOrder.paymentMethod || "Không xác định"}
                     </p>
                     {selectedOrder.cancelReason && (
@@ -1328,7 +1320,7 @@ const OrderPage: React.FC = () => {
                       <tr>
                         <th>Hình ảnh</th>
                         <th>Tên sản phẩm</th>
-                        <th>Biến thể</th>
+                        <th>Khối lượng</th>
                         <th>Số lượng</th>
                       </tr>
                     </thead>

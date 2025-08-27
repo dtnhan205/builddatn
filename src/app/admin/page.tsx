@@ -80,8 +80,8 @@ interface Order {
   sdt: string;
   paymentMethod: string;
   note: string;
-  paymentStatus: "pending" | "completed" | "delivering" | "failed" | "cancelled";
-  shippingStatus: "pending" | "in_transit" | "delivered" | "returned";
+  paymentStatus: "pending" | "completed" | "cancelled";
+  shippingStatus: "pending" | "confirmed" | "cancelled";
   createdAt: string;
 }
 
@@ -140,36 +140,30 @@ const formatCommentDate = (dateString: string): string => {
 const paymentStatusMapping = {
   pending: "Chờ xử lý",
   completed: "Đã thanh toán",
-  failed: "Thất bại",
   cancelled: "Đã hoàn",
 } as const;
 
 const shippingStatusMapping = {
   pending: "Chờ xử lý",
-  in_transit: "Đang vận chuyển",
-  delivered: "Đã giao hàng",
-  returned: "Đã hoàn",
+  confirmed: "Đã xác nhận",
+  cancelled: "Hủy đơn hàng",
 } as const;
 
 const reverseShippingStatusMapping = {
   "Chờ xử lý": "pending",
-  "Đang vận chuyển": "in_transit",
-  "Đã giao hàng": "delivered",
-  "Đã hoàn": "returned",
+  "Đã xác nhận": "confirmed",
+  "Hủy đơn hàng": "cancelled",
 } as const;
 
 const statusProgression: { [key: string]: string[] } = {
-  pending: ["in_transit"],
-  in_transit: ["delivered"],
-  delivered: ["returned"],
-  returned: [],
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["cancelled"],
+  cancelled: [],
 };
 
 const allStatuses = [
   { value: "pending", label: "Chờ xử lý" },
-  { value: "in_transit", label: "Đang vận chuyển" },
-  { value: "delivered", label: "Đã giao hàng" },
-  { value: "returned", label: "Đã hoàn" },
+  { value: "confirmed", label: "Đã xác nhận" },
   { value: "cancelled", label: "Hủy đơn hàng" },
 ];
 
@@ -274,30 +268,23 @@ const AD_Home: React.FC = () => {
     const reloadRequested = searchParams.get("reload") === "true";
     const timeSinceLastLoad = lastLoad ? now - parseInt(lastLoad, 10) : Infinity;
 
-    // Trigger reload if:
-    // 1. reload=true query parameter is present, OR
-    // 2. No previous load timestamp exists, OR
-    // 3. More than 1 second has passed since the last reload (to prevent rapid reloads)
     if (reloadRequested || !lastLoad || timeSinceLastLoad > 1000) {
-      // Update timestamp and clear query parameter
       sessionStorage.setItem("lastAdminLoad", now.toString());
-      window.history.replaceState({}, "", "/admin"); // Remove ?reload=true
+      window.history.replaceState({}, "", "/admin");
       window.location.reload();
     }
 
-    // Track navigation away from /admin using browser navigation events
     const handlePopState = () => {
       if (
         window.location.pathname !== "/admin" &&
         window.location.pathname !== "/admin?reload=true"
       ) {
-        sessionStorage.removeItem("lastAdminLoad"); // Reset timestamp when leaving /admin
+        sessionStorage.removeItem("lastAdminLoad");
       }
     };
 
     window.addEventListener("popstate", handlePopState);
 
-    // Cleanup
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
@@ -346,10 +333,15 @@ const AD_Home: React.FC = () => {
     return weekLabels;
   }, [selectedMonth, selectedYear]);
 
-  const cancelReasons = [
-    { value: "customer_request", label: "Khách hàng yêu cầu hủy" },
+  const cancelReasons: { value: string; label: string }[] = [
+    { value: "Đổi ý không mua nữa", label: "Đổi ý không mua nữa" },
+    { value: "Muốn thay đổi sản phẩm", label: "Muốn thay đổi sản phẩm" },
+    { value: "Thay đổi phương thức thanh toán", label: "Thay đổi phương thức thanh toán" },
+    { value: "Thay đổi địa chỉ giao hàng", label: "Thay đổi địa chỉ giao hàng" },
+    { value: "Lý do khác", label: "Lý do khác" },
     { value: "out_of_stock", label: "Hết hàng" },
-    { value: "invalid_info", label: "Thông tin đơn hàng không hợp lệ" },
+    { value: "customer_cancelled", label: "Khách hủy" },
+    { value: "system_error", label: "Lỗi hệ thống" },
     { value: "other", label: "Khác" },
   ];
 
@@ -388,21 +380,16 @@ const AD_Home: React.FC = () => {
   };
 
   const handleShippingStatusChange = async (orderId: string, newStatus: string, currentStatus: string) => {
-    if (currentStatus === "returned") {
-      showNotification("Không thể thay đổi trạng thái đơn hàng Đã hoàn", "error");
-      return;
-    }
-
-    if (newStatus === "Hủy đơn hàng") {
-      handleCancelOrder(orderId, currentStatus);
-      return;
-    }
-
     const englishStatus =
       reverseShippingStatusMapping[newStatus as keyof typeof reverseShippingStatusMapping] || newStatus;
 
     if (!statusProgression[currentStatus].includes(englishStatus)) {
-      showNotification("Trạng thái không hợp lệ hoặc không thể chuyển về trạng thái trước đó", "error");
+      showNotification("Trạng thái không hợp lệ hoặc không thể chuyển đổi", "error");
+      return;
+    }
+
+    if (englishStatus === "cancelled") {
+      handleCancelOrder(orderId, currentStatus);
       return;
     }
 
@@ -421,10 +408,8 @@ const AD_Home: React.FC = () => {
         shippingStatus: englishStatus,
       };
 
-      if (englishStatus === "delivered") {
+      if (englishStatus === "confirmed") {
         updatePayload.paymentStatus = "completed";
-      } else if (englishStatus === "returned") {
-        updatePayload.paymentStatus = "cancelled";
       }
 
       const token = localStorage.getItem("token");
@@ -453,7 +438,7 @@ const AD_Home: React.FC = () => {
 
       const { order }: { order: Order } = await response.json();
 
-      setRecentOrders((prevOrders) =>
+      setPendingOrders((prevOrders) =>
         prevOrders.map((o) =>
           o._id === orderId
             ? { ...o, shippingStatus: order.shippingStatus, paymentStatus: order.paymentStatus }
@@ -705,7 +690,7 @@ const AD_Home: React.FC = () => {
         },
         tooltip: {
           callbacks: {
-            label: (context: any) => `Doanh thu: ${formatCurrency(context.raw)}`,
+            label: (context) => `Doanh thu: ${formatCurrency(context.raw as number)}`,
           },
         },
       },
@@ -815,7 +800,6 @@ const AD_Home: React.FC = () => {
     return (orders: Order[], period: string, month: number, year: number, week?: number): BestSellingProduct[] => {
       const productMap: { [key: string]: BestSellingProduct } = {};
 
-      // Filter orders by the selected time period
       const filteredOrders = orders.filter((order) => {
         const orderDate = new Date(order.createdAt);
         if (period === "week" && week !== undefined) {
@@ -840,7 +824,6 @@ const AD_Home: React.FC = () => {
         }
       });
 
-      // Aggregate quantities and revenue per product
       filteredOrders.forEach((order) => {
         if (order.paymentStatus === "completed") {
           order.items.forEach((item) => {
@@ -865,7 +848,6 @@ const AD_Home: React.FC = () => {
         }
       });
 
-      // Convert to array and sort by total quantity
       const bestSellingProducts = Object.values(productMap).sort(
         (a, b) => b.totalQuantity - a.totalQuantity
       );
@@ -968,7 +950,6 @@ const AD_Home: React.FC = () => {
         const newUsers = users.filter((u) => isInPeriod(new Date(u.createdAt))).length;
         const newComments = comments.filter((c) => isInPeriod(new Date(c.createdAt))).length;
 
-        // Calculate best-selling products
         const bestSelling = calculateBestSellingProducts(orders, timePeriod, selectedMonth, selectedYear, selectedWeek);
 
         setStats({ orders: ordersInPeriod.length, newUsers, revenue, newComments });
@@ -1350,18 +1331,15 @@ const AD_Home: React.FC = () => {
                           }
                           className={styles.categorySelect}
                           onClick={(e) => e.stopPropagation()}
-                          disabled={order.shippingStatus === "returned"}
+                          disabled={order.shippingStatus === "cancelled"}
                         >
                           {allStatuses.map((status) => (
                             <option
                               key={status.value}
                               value={status.label}
                               disabled={
-                                order.shippingStatus === "returned" ||
-                                (status.value !== "cancelled" &&
-                                  !statusProgression[order.shippingStatus].includes(status.value) &&
-                                  status.value !== order.shippingStatus) ||
-                                (status.value === "cancelled" && order.shippingStatus !== "pending")
+                                order.shippingStatus === "cancelled" ||
+                                !statusProgression[order.shippingStatus].includes(status.value)
                               }
                             >
                               {status.label}
@@ -1631,8 +1609,6 @@ const AD_Home: React.FC = () => {
             </div>
           )}
         </section>
-
-        
       </div>
 
       {selectedCommentId && (
@@ -1895,15 +1871,11 @@ const AD_Home: React.FC = () => {
             <p>
               Bạn có chắc chắn muốn chuyển trạng thái vận chuyển sang{" "}
               <strong>{showConfirm.newStatus}</strong>?{" "}
-              {showConfirm.newStatus === "Đã giao hàng" ? (
+              {showConfirm.newStatus === "Đã xác nhận" && (
                 <>
                   Trạng thái thanh toán sẽ được cập nhật thành <strong>Đã thanh toán</strong>.
                 </>
-              ) : showConfirm.newStatus === "Đã hoàn" ? (
-                <>
-                  Trạng thái thanh toán sẽ được cập nhật thành <strong>Đã hoàn</strong>.
-                </>
-              ) : null}
+              )}
             </p>
             <div className={styles.modalActions}>
               <button
@@ -1946,7 +1918,6 @@ const AD_Home: React.FC = () => {
       )}
     </div>
   );
-  
 };
 
 export default AD_Home;
