@@ -163,11 +163,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </div>
               </div>
               <div className="footer-newsletter">
-                <h4>Đăng ký email để nhận thông tin</h4>
-                <p>Hãy là người đầu tiên biết về sự kiện mới, sản phẩm mới</p>
+                <h4>Đăng ký tài khoản để nhận ưu đãi ngay </h4>
+                <p>Hãy đăng ký tài khoản để nhận ưu đãi từ Pure-Botanica</p>
                 <form>
-                  <input type="email" placeholder="Nhập email của bạn..." />
-                  <button type="submit">Đăng Ký</button>
+                   <Link href="/user/register"><button type="submit">Đăng ký ngay</button></Link>
+                  
                 </form>
                 <div className="footer-address">
                   <p>

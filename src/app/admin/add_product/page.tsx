@@ -1,52 +1,10 @@
 "use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./add_product.module.css";
 import ToastNotification from "../../user/ToastNotification/ToastNotification";
-
-// Hàm slugify tùy chỉnh cho tiếng Việt
-const slugify = (text: string): string => {
-  const vietnameseMap: { [key: string]: string } = {
-    'á': 'a', 'à': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
-    'ă': 'a', 'ắ': 'a', 'ằ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
-    'â': 'a', 'ấ': 'a', 'ầ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
-    'é': 'e', 'è': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
-    'ê': 'e', 'ế': 'e', 'ề': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
-    'í': 'i', 'ì': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
-    'ó': 'o', 'ò': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
-    'ô': 'o', 'ố': 'o', 'ồ': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
-    'ơ': 'o', 'ớ': 'o', 'ờ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
-    'ú': 'u', 'ù': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
-    'ư': 'u', 'ứ': 'u', 'ừ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
-    'ý': 'y', 'ỳ': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
-    'đ': 'd',
-    'Á': 'A', 'À': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
-    'Ă': 'A', 'Ắ': 'A', 'Ằ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
-    'Â': 'A', 'Ấ': 'A', 'Ầ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
-    'É': 'E', 'È': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
-    'Ê': 'E', 'Ế': 'E', 'Ề': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
-    'Í': 'I', 'Ì': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
-    'Ó': 'O', 'Ò': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
-    'Ô': 'O', 'Ố': 'O', 'Ồ': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
-    'Ơ': 'O', 'Ớ': 'O', 'Ờ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
-    'Ú': 'U', 'Ù': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
-    'Ư': 'U', 'Ứ': 'U', 'Ừ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
-    'Ý': 'Y', 'Ỳ': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
-  };
-
-  let slug = text
-    .split('')
-    .map((char) => vietnameseMap[char] || char)
-    .join('')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  return slug || 'unnamed';
-};
 
 interface Category {
   status: string;
@@ -83,7 +41,6 @@ interface ActiveFormats {
 
 interface Errors {
   name?: string;
-  slug?: string;
   id_category?: string;
   id_brand?: string;
   short_description?: string;
@@ -97,7 +54,6 @@ const AddProduct = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [formData, setFormData] = useState({
     name: "",
-    slug: "",
     id_category: "",
     id_brand: "",
     short_description: "",
@@ -129,6 +85,7 @@ const AddProduct = () => {
 
   const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: "", type: "success" }), 3000);
   };
 
   useEffect(() => {
@@ -243,16 +200,15 @@ const AddProduct = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const trimmedValue = (name === "name" || name === "short_description") ? value.trim() : value;
+    // Only trim for short_description, not for name
+    const trimmedValue = name === "short_description" ? value.trim() : value;
     setFormData((prevState) => ({
       ...prevState,
       [name]: trimmedValue,
-      ...(name === "name" && { slug: slugify(trimmedValue) }),
     }));
     setErrors((prevErrors) => ({
       ...prevErrors,
-      [name]: name === "name" ? (trimmedValue ? "" : "Tên sản phẩm không được để trống.") : validateShortDescription(trimmedValue),
-      ...(name === "name" && { slug: slugify(trimmedValue) && slugify(trimmedValue) !== "unnamed" ? "" : "Slug không hợp lệ." }),
+      [name]: name === "name" ? validateName(trimmedValue) : validateShortDescription(trimmedValue),
     }));
   };
 
@@ -356,6 +312,11 @@ const AddProduct = () => {
     }
   };
 
+  const validateName = (name: string): string => {
+    if (!name) return "Tên sản phẩm không được để trống.";
+    return "";
+  };
+
   const validateCategory = (id_category: string): string => {
     if (!id_category) return "Vui lòng chọn danh mục.";
     const category = categories.find((cat) => cat._id === id_category);
@@ -386,12 +347,11 @@ const AddProduct = () => {
     if (options.length === 0) return "Phải có ít nhất một tùy chọn sản phẩm.";
 
     const sizeUnitSet = new Set<string>();
-    const firstUnit = options[0].unit; // Lấy đơn vị của tùy chọn đầu tiên
+    const firstUnit = options[0].unit;
 
     for (let i = 0; i < options.length; i++) {
       const opt = options[i];
 
-      // Kiểm tra đơn vị có khớp với đơn vị của tùy chọn đầu tiên không
       if (opt.unit !== firstUnit) {
         return `Tùy chọn ${i + 1}: Đơn vị phải giống với tùy chọn đầu tiên (${firstUnit}).`;
       }
@@ -431,12 +391,9 @@ const AddProduct = () => {
   const handleInputBlur = async (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === "name") {
-      const nameError = value.trim() ? "" : "Tên sản phẩm không được để trống.";
-      const slugError = slugify(value.trim()) && slugify(value.trim()) !== "unnamed" ? "" : "Slug không hợp lệ.";
       setErrors((prevErrors) => ({
         ...prevErrors,
-        name: nameError,
-        slug: slugError,
+        name: validateName(value),
       }));
     } else if (name === "id_category") {
       setErrors((prevErrors) => ({
@@ -468,16 +425,12 @@ const AddProduct = () => {
   };
 
   const handleImageBlur = () => {
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      images: validateImages(formData.images),
-    }));
+    setErrors((prevErrors) => ({ ...prevErrors, images: validateImages(formData.images) }));
   };
 
   const validateForm = (): Errors => {
     return {
-      name: formData.name.trim() ? "" : "Tên sản phẩm không được để trống.",
-      slug: formData.slug && formData.slug !== "unnamed" ? "" : "Slug không hợp lệ.",
+      name: validateName(formData.name),
       id_category: validateCategory(formData.id_category),
       id_brand: validateBrand(formData.id_brand),
       short_description: validateShortDescription(formData.short_description),
@@ -501,7 +454,6 @@ const AddProduct = () => {
     try {
       const productData = new FormData();
       productData.append("name", formData.name);
-      productData.append("slug", formData.slug);
       productData.append("id_category", formData.id_category);
       productData.append("id_brand", formData.id_brand);
       productData.append("short_description", formData.short_description);
@@ -541,7 +493,6 @@ const AddProduct = () => {
         showNotification("Thêm sản phẩm thành công", "success");
         setFormData({
           name: "",
-          slug: "",
           id_category: "",
           id_brand: "",
           short_description: "",
@@ -691,9 +642,8 @@ const AddProduct = () => {
                   placeholder="Nhập tên sản phẩm"
                 />
                 {errors.name && <span className={styles.error}>{errors.name}</span>}
-                {errors.slug && <span className={styles.error}>{errors.slug}</span>}
               </div>
-               <div className={styles.formGroup}>
+              <div className={styles.formGroup}>
                 <label className={styles.label}>Danh mục *</label>
                 <select
                   name="id_category"
@@ -714,15 +664,13 @@ const AddProduct = () => {
                 </select>
                 {errors.id_category && <span className={styles.error}>{errors.id_category}</span>}
               </div>
-             
-              
             </div>
-             <div className={styles.formGroup}>
+            <div className={styles.formGroup}>
               <label className={styles.label}>Mô tả ngắn *</label>
               <textarea
                 name="short_description"
                 value={formData.short_description}
-                onChange={handleInputChange}  
+                onChange={handleInputChange}
                 onBlur={handleInputBlur}
                 className={styles.textarea}
                 required
@@ -731,27 +679,26 @@ const AddProduct = () => {
               {errors.short_description && <span className={styles.error}>{errors.short_description}</span>}
             </div>
             <div className={styles.formGroup}>
-                <label className={styles.label}>Thương hiệu *</label>
-                <select
-                  name="id_brand"
-                  value={formData.id_brand}
-                  onChange={handleSelectChange}
-                  onBlur={handleInputBlur}
-                  className={styles.select}
-                  required
-                >
-                  <option value="">-- Chọn thương hiệu --</option>
-                  {brands
-                    .filter((brand) => brand.status !== "hidden")
-                    .map((brand) => (
-                      <option key={brand._id} value={brand._id}>
-                        {brand.name}
-                      </option>
-                    ))}
-                </select>
-                {errors.id_brand && <span className={styles.error}>{errors.id_brand}</span>}
-              </div>
-           
+              <label className={styles.label}>Thương hiệu *</label>
+              <select
+                name="id_brand"
+                value={formData.id_brand}
+                onChange={handleSelectChange}
+                onBlur={handleInputBlur}
+                className={styles.select}
+                required
+              >
+                <option value="">-- Chọn thương hiệu --</option>
+                {brands
+                  .filter((brand) => brand.status !== "hidden")
+                  .map((brand) => (
+                    <option key={brand._id} value={brand._id}>
+                      {brand.name}
+                    </option>
+                  ))}
+              </select>
+              {errors.id_brand && <span className={styles.error}>{errors.id_brand}</span>}
+            </div>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.label}>Tùy chọn sản phẩm *</label>

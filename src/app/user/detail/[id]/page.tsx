@@ -1026,7 +1026,8 @@ const getProductPrice = (product: Product): number => {
           </div>
         </section>
 
-        <div className={styles['product-info']}>
+        <div className={styles['product-info']}
+         style={{ marginBottom:50  }}>
           <h2 className={styles['product-info-title']}>Thông tin sản phẩm:</h2>
           <div dangerouslySetInnerHTML={{ __html: product.description || '' }} />
         </div>
@@ -1104,7 +1105,7 @@ const getProductPrice = (product: Product): number => {
             {!canReview && (
               <p className={styles['review-eligibility-note']}>
                 {userId
-                  ? 'Bạn đã đánh giá sản phẩm này hoặc chưa mua và nhận hàng thành công.'
+                  ? ''
                   : 'Vui lòng đăng nhập và mua hàng để đánh giá.'}
               </p>
             )}

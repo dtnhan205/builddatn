@@ -481,7 +481,7 @@ export default function ProductPage() {
         <div className={styles.filterContainer}>
           <input
             type="text"
-            placeholder="Tìm kiếm sản phẩm hoặc danh mục..."
+            placeholder="Tìm kiếm sản phẩm ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={styles.searchInput}

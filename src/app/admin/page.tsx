@@ -1254,7 +1254,7 @@ const AD_Home: React.FC = () => {
             <table className={styles.productTable}>
               <thead className={styles.productTableThead}>
                 <tr>
-                  <th>ID</th>
+                  <th>STT</th>
                   <th>Tên</th>
                   <th>Tổng Tiền</th>
                   <th>Ngày</th>
@@ -1431,121 +1431,125 @@ const AD_Home: React.FC = () => {
           )}
         </section>
 
-        <section className={styles.recentComments}>
-          <div className={styles.sectionHeader}>
-            <h3>Đánh giá mới</h3>
-            <div className={styles.filterContainer}>
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo nội dung, người dùng, sản phẩm..."
-                value={searchQueryComments}
-                onChange={(e) => setSearchQueryComments(e.target.value)}
-                className={styles.searchInput}
-                aria-label="Tìm kiếm Đánh giá"
-              />
-            </div>
-          </div>
-          <div className={styles.tableContainer}>
-            <table className={styles.productTable}>
-              <thead className={styles.productTableThead}>
-                <tr>
-                  <th>Người dùng</th>
-                  <th>Sản phẩm</th>
-                  <th>Số sao</th>
+            <section className={styles.recentComments}>
+      <div className={styles.sectionHeader}>
+        <h3>Đánh giá gần nhất</h3>
+        <div className={styles.filterContainer}>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo nội dung, người dùng, sản phẩm..."
+            value={searchQueryComments}
+            onChange={(e) => setSearchQueryComments(e.target.value)}
+            className={styles.searchInput}
+            aria-label="Tìm kiếm Đánh giá"
+          />
+        </div>
+      </div>
+      <div className={styles.tableContainer}>
+        <table className={styles.productTable}>
+          <thead className={styles.productTableThead}>
+            <tr>
+              <th>Người dùng</th>
+              <th>Sản phẩm</th>
+              <th>Số sao</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr key="loading-comments">
+                <td colSpan={3} style={ { textAlign: "center" } }>
+                  <div className={styles.processingIndicator}>
+                    <FontAwesomeIcon icon={faRedo} spin />
+                    <p>Đang tải danh sách Đánh giá...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : error ? (
+              <tr key="error-comments">
+                <td colSpan={3} style={ { textAlign: "center" } }>
+                  <p className={styles.errorMessage}>{error}</p>
+                  <button
+                    className={styles.retryButton}
+                    onClick={async () => {
+                      setLoading(true);
+                      setError(null);
+                      try {
+                        const token = localStorage.getItem("token");
+                        if (!token) {
+                          throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+                        }
+                        const res = await fetch("https://api-zeal.onrender.com/api/comments", {
+                          method: "GET",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                          },
+                          cache: "no-store",
+                        });
+                        if (res.status === 401 || res.status === 403) {
+                          showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
+                          localStorage.removeItem("token");
+                          localStorage.removeItem("role");
+                          router.push("/user/login");
+                          return;
+                        }
+                        if (!res.ok) {
+                          throw new Error(`Lỗi khi tải danh sách Đánh giá: ${res.status}`);
+                        }
+                        const data: Comment[] = await res.json();
+                        if (!Array.isArray(data)) {
+                          throw new Error("Dữ liệu Đánh giá không hợp lệ");
+                        }
+                        // Sort and take top 10
+                        const recentComments = data
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .slice(0, 10);
+                        setComments(recentComments);
+                        setFilteredComments(recentComments);
+                      } catch (error: any) {
+                        const errorMessage = error.message || "Không thể tải danh sách Đánh giá.";
+                        showNotification(errorMessage, "error");
+                        setError(errorMessage);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    title="Thử lại"
+                  >
+                    <FontAwesomeIcon icon={faRedo} />
+                  </button>
+                </td>
+              </tr>
+            ) : filteredComments.length > 0 ? (
+              filteredComments.map((comment, index) => (
+                <tr
+                  key={comment._id}
+                  onClick={() => handleToggleCommentDetails(comment._id)}
+                  className={`${styles.productRow} ${
+                    selectedCommentId === comment._id ? styles.productRowActive : ""
+                  }`}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>
+                    {comment.user
+                      ? `${comment.user.username} (${comment.user.email})`
+                      : "Người dùng không tồn tại"}
+                  </td>
+                  <td>{comment.product?.name || "Sản phẩm không tồn tại"}</td>
+                  <td>{renderStars(comment.rating)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading && comments.length === 0 ? (
-                  <tr key="loading-comments">
-                    <td colSpan={4} style={{ textAlign: "center" }}>
-                      <div className={styles.processingIndicator}>
-                        <FontAwesomeIcon icon={faRedo} spin />
-                        <p>Đang tải danh sách Đánh giá...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : error && comments.length === 0 ? (
-                  <tr key="error-comments">
-                    <td colSpan={4} style={{ textAlign: "center" }}>
-                      <p className={styles.errorMessage}>{error}</p>
-                      <button
-                        className={styles.retryButton}
-                        onClick={async () => {
-                          setLoading(true);
-                          setError(null);
-                          try {
-                            const token = localStorage.getItem("token");
-                            if (!token) {
-                              throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-                            }
-                            const res = await fetch("https://api-zeal.onrender.com/api/comments", {
-                              method: "GET",
-                              headers: {
-                                "Content-Type": "application/json",
-                                Authorization: `Bearer ${token}`,
-                              },
-                              cache: "no-store",
-                            });
-                            if (res.status === 401 || res.status === 403) {
-                              showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
-                              localStorage.removeItem("token");
-                              localStorage.removeItem("role");
-                              router.push("/user/login");
-                              return;
-                            }
-                            if (!res.ok) {
-                              throw new Error(`Lỗi khi tải danh sách Đánh giá: ${res.status}`);
-                            }
-                            const data: Comment[] = await res.json();
-                            if (!Array.isArray(data)) {
-                              throw new Error("Dữ liệu Đánh giá không hợp lệ");
-                            }
-                            setComments(data);
-                            setFilteredComments(data);
-                          } catch (error: any) {
-                            const errorMessage = error.message || "Không thể tải danh sách Đánh giá.";
-                            showNotification(errorMessage, "error");
-                            setError(errorMessage);
-                          } finally {
-                            setLoading(false);
-                          }
-                        }}
-                        title="Thử lại"
-                      >
-                        <FontAwesomeIcon icon={faRedo} />
-                      </button>
-                    </td>
-                  </tr>
-                ) : currentComments.length > 0 ? (
-                  currentComments.map((comment) => (
-                    <tr
-                      key={comment._id}
-                      onClick={() => handleToggleCommentDetails(comment._id)}
-                      className={`${styles.productRow} ${
-                        selectedCommentId === comment._id ? styles.productRowActive : ""
-                      }`}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <td>
-                        {comment.user
-                          ? `${comment.user.username} (${comment.user.email})`
-                          : "Người dùng không tồn tại"}
-                      </td>
-                      <td>{comment.product?.name || "Sản phẩm không tồn tại"}</td>
-                      <td>{renderStars(comment.rating)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr key="empty-comments">
-                    <td colSpan={4} className={styles.emptyState}>
-                      <h3>Không có Đánh giá</h3>
-                      <p>Chưa có Đánh giá nào phù hợp với bộ lọc.</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))
+            ) : (
+              <tr key="empty-comments">
+                <td colSpan={3} className={styles.emptyState}>
+                  <h3>Không có Đánh giá</h3>
+                  <p>Chưa có Đánh giá nào phù hợp với bộ lọc.</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
           {totalPagesComments > 1 && (
             <div className={styles.pagination}>
               {(() => {

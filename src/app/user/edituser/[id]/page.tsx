@@ -308,9 +308,9 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
     }
   };
 
-  if (loading) return <p className={styles.loading}>Đang tải user_info...</p>;
+  if (loading) return <p className={styles.loading}>Đang tải thông tin khách hàng...</p>;
   if (error) return <p className={styles.error}>{error}</p>;
-  if (!user) return <p className={styles.error}>Không tìm thấy user_info.</p>;
+  if (!user) return <p className={styles.error}>Không tìm thấy thông tin khách hàng.</p>;
 
   return (
     <div className={styles.container}>
@@ -321,7 +321,7 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
           onClose={hideToast}
         />
       )}
-      <h2 className={styles.title}>Chỉnh sửa user_info</h2>
+      <h2 className={styles.title}>Chỉnh sửa thông tin khách hàng</h2>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formGroup}>
           <label htmlFor="username" className={styles.label}>

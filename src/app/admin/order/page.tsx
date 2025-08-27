@@ -170,15 +170,15 @@ const OrderPage: React.FC = () => {
     "Đã từ chối": "rejected",
   };
 
-  const statusProgression: { [key: string]: string[] } = {
-    pending: ["confirmed", "cancelled"],
-    confirmed: ["in_transit", "cancelled", "failed"],
-    in_transit: ["delivered", "failed"],
-    delivered: ["returned"],
-    returned: [],
-    cancelled: [],
-    failed: [],
-  };
+const statusProgression: { [key: string]: string[] } = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["in_transit", "cancelled"], // Xóa "failed"
+  in_transit: ["delivered", "failed"],
+  delivered: ["returned"],
+  returned: [],
+  cancelled: [],
+  failed: [],
+};
 
   const allStatuses: { value: string; label: string }[] = [
     { value: "all", label: "Tất cả trạng thái" },
@@ -398,19 +398,15 @@ const OrderPage: React.FC = () => {
         setShowConfirm({ orderId, newStatus, currentStatus, type: "cancel", cancelReason: "" });
         setSelectedCancelReason("");
         setCancelReasonInput("");
-      } else if (englishStatus === "failed") {
-        if (!['confirmed', 'in_transit'].includes(currentStatus)) {
-          showNotification("Chỉ có thể đánh dấu thất bại khi trạng thái là Đã xác nhận hoặc Đang vận chuyển", "error");
-          return;
-        }
-        if (order.paymentStatus === "completed") {
-          showNotification("Không thể đánh dấu giao hàng thất bại cho đơn hàng đã thanh toán", "error");
-          return;
-        }
-        setShowConfirm({ orderId, newStatus, currentStatus, type: "fail", failReason: "" });
-        setSelectedFailReason("");
-        setFailReasonInput("");
-      } else if (englishStatus === "returned") {
+      }else if (englishStatus === "failed") {
+  if (currentStatus !== "in_transit") {
+    showNotification("Chỉ có thể đánh dấu thất bại khi trạng thái là Đang vận chuyển", "error");
+    return;
+  }
+  setShowConfirm({ orderId, newStatus, currentStatus, type: "fail", failReason: "" });
+  setSelectedFailReason("");
+  setFailReasonInput("");
+}else if (englishStatus === "returned") {
         if (currentStatus !== "delivered" || order.returnStatus !== "approved") {
           showNotification("Chỉ có thể chuyển sang trạng thái Hoàn hàng khi đơn hàng đã giao và yêu cầu hoàn hàng được chấp nhận", "error");
           return;
@@ -500,16 +496,16 @@ const OrderPage: React.FC = () => {
         showNotification("Vui lòng chọn hoặc nhập lý do giao hàng thất bại", "error");
         return;
       }
-      if (order.paymentStatus === "completed") {
-        showNotification("Không thể đánh dấu giao hàng thất bại cho đơn hàng đã thanh toán", "error");
+      if (currentStatus === "confirmed") {
+        showNotification("Không thể chuyển từ Đã xác nhận sang Giao hàng thất bại", "error");
         return;
       }
-      updatePayload = {
-        shippingStatus: englishStatus,
-        failReason: finalFailReason,
-        paymentStatus: "failed",
-      };
-    } else {
+  updatePayload = {
+    shippingStatus: englishStatus,
+    failReason: finalFailReason,
+    paymentStatus: "failed",
+  };
+} else {
       englishStatus = reverseReturnStatusMapping[newStatus] || newStatus;
       updatePayload = { returnStatus: englishStatus };
       if (englishStatus === "approved") {
@@ -837,7 +833,7 @@ const OrderPage: React.FC = () => {
         <table className={styles.orderTable}>
           <thead className={styles.orderTableThead}>
             <tr>
-              <th>ID</th>
+              <th>STT</th>
               <th>Tên</th>
               <th>Tổng Tiền</th>
               <th>Ngày</th>
@@ -888,25 +884,25 @@ const OrderPage: React.FC = () => {
                         .map((status) => {
                           const isValidStatus = order.shippingStatus && statusProgression[order.shippingStatus];
                           return (
-                            <option
-                              key={status.value}
-                              value={status.label}
-                              disabled={
-                                status.value === "cancelled"
-                                  ? !['pending', 'confirmed'].includes(order.shippingStatus) || order.paymentStatus !== "pending"
-                                  : status.value === "failed"
-                                  ? !['confirmed', 'in_transit'].includes(order.shippingStatus) || order.paymentStatus === "completed"
-                                  : status.value === "returned"
-                                  ? order.shippingStatus !== "delivered" || order.returnStatus !== "approved"
-                                  : ["returned", "cancelled", "failed"].includes(order.shippingStatus) ||
-                                    (isValidStatus
-                                      ? !statusProgression[order.shippingStatus].includes(status.value) &&
-                                        status.value !== order.shippingStatus
-                                      : true)
-                              }
-                            >
-                              {status.label}
-                            </option>
+                       <option
+                          key={status.value}
+                          value={status.label}
+                          disabled={
+                            status.value === "cancelled"
+                              ? !['pending', 'confirmed'].includes(order.shippingStatus) || order.paymentStatus !== "pending"
+                              : status.value === "failed"
+                              ? order.shippingStatus !== "in_transit" // Chỉ cho phép từ in_transit
+                              : status.value === "returned"
+                              ? order.shippingStatus !== "delivered" || order.returnStatus !== "approved"
+                              : ["returned", "cancelled", "failed"].includes(order.shippingStatus) ||
+                                (isValidStatus
+                                  ? !statusProgression[order.shippingStatus].includes(status.value) &&
+                                    status.value !== order.shippingStatus
+                                  : true)
+                          }
+                        >
+                          {status.label}
+                        </option>
                           );
                         })}
                     </select>

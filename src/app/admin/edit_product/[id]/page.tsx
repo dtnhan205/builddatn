@@ -49,6 +49,21 @@ const slugify = (text: string): string => {
   return slug || 'unnamed';
 };
 
+// Hàm làm sạch HTML
+const cleanHtmlContent = (html: string): string => {
+  const unescapedHtml = html
+    .replace(/\u003C/g, "<")
+    .replace(/\u003E/g, ">")
+    .replace(/\u0022/g, '"');
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(unescapedHtml, "text/html");
+  if (doc.querySelector("parsererror")) {
+    console.error("Invalid HTML content:", unescapedHtml);
+    return "<p>Mô tả không hợp lệ. Vui lòng chỉnh sửa lại.</p>";
+  }
+  return doc.body.innerHTML;
+};
+
 interface Option {
   value: string;
   unit: "ml" | "g";
@@ -134,7 +149,7 @@ const EditProduct = () => {
     id_category: "",
     id_brand: "",
     short_description: "",
-    description: "",
+    description: "<p>Nhập mô tả sản phẩm...</p>",
     option: [{ value: "", unit: "ml", price: "", discount_price: "", stock: "" }] as Option[],
     images: [] as File[],
   });
@@ -207,7 +222,7 @@ const EditProduct = () => {
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         const productResponse = await fetch(`https://api-zeal.onrender.com/api/products/${slug}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -223,6 +238,8 @@ const EditProduct = () => {
           throw new Error("Không thể tải thông tin sản phẩm");
         }
         const productData: Product = await productResponse.json();
+        console.log("API Response:", productData);
+        console.log("Description:", productData.description);
 
         const categoriesResponse = await fetch("https://api-zeal.onrender.com/api/categories", {
           headers: { Authorization: `Bearer ${token}` },
@@ -254,6 +271,11 @@ const EditProduct = () => {
                 };
               })
             : [{ value: "", unit: "ml", price: "", discount_price: "", stock: "" }];
+
+        const cleanedDescription = productData.description
+          ? cleanHtmlContent(productData.description)
+          : "<p>Nhập mô tả sản phẩm...</p>";
+
         setCategories(categoriesData);
         setBrands(brandsData);
         setFormData({
@@ -263,19 +285,16 @@ const EditProduct = () => {
           id_category: typeof productData.id_category === "string" ? productData.id_category : productData.id_category?._id || "",
           id_brand: typeof productData.id_brand === "string" ? productData.id_brand : productData.id_brand?._id || "",
           short_description: productData.short_description || "",
-          description: productData.description || "",
+          description: cleanedDescription,
           option: options,
           images: [],
         });
         setExistingImages(productData.images || []);
 
-        if (editorRef.current && productData.description) {
-          editorRef.current.innerHTML = productData.description;
-        }
       } catch (error) {
         const errorMessage =
           error instanceof Error && error.name === "AbortError"
-            ? "Yêu cầu tải dữ liệu đã quá thời gian chờ (15 giây). Vui lòng thử lại."
+            ? "Yêu cầu tải dữ liệu đã quá thời gian chờ (30 giây). Vui lòng thử lại."
             : error instanceof Error
             ? error.message === "Phiên đăng nhập hết hạn"
               ? "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!"
@@ -298,6 +317,18 @@ const EditProduct = () => {
     }
   }, [slug, router]);
 
+  useEffect(() => {
+    const setDescription = () => {
+      if (editorRef.current && formData.description) {
+        console.log("Assigning description to editor:", formData.description);
+        editorRef.current.innerHTML = formData.description;
+      }
+    };
+    setDescription();
+    const timer = setTimeout(setDescription, 100);
+    return () => clearTimeout(timer);
+  }, [formData.description]);
+
   const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
@@ -306,8 +337,7 @@ const EditProduct = () => {
   };
 
   const validateName = (name: string): string => {
-    const trimmedName = name.trim();
-    if (!trimmedName) return "Tên sản phẩm không được để trống.";
+    if (!name) return "Tên sản phẩm không được để trống.";
     return "";
   };
 
@@ -338,7 +368,8 @@ const EditProduct = () => {
   };
 
   const validateDescription = (description: string): string => {
-    if (!description.trim() || description === "<p><br></p>") return "Mô tả chi tiết không được để trống.";
+    if (!description.trim() || description === "<p><br></p>" || description === "<p>Nhập mô tả sản phẩm...</p>")
+      return "Mô tả chi tiết không được để trống.";
     return "";
   };
 
@@ -392,7 +423,7 @@ const EditProduct = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    const trimmedValue = (name === "name" || name === "short_description") ? value.trim() : value;
+    const trimmedValue = name === "short_description" ? value.trim() : value;
     setFormData((prev) => ({
       ...prev,
       [name]: trimmedValue,
@@ -535,7 +566,7 @@ const EditProduct = () => {
 
   const handleDescriptionChange = () => {
     if (editorRef.current) {
-      const description = editorRef.current.innerHTML;
+      const description = cleanHtmlContent(editorRef.current.innerHTML);
       setFormData((prev) => ({
         ...prev,
         description,
@@ -547,7 +578,7 @@ const EditProduct = () => {
 
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const trimmedValue = (name === "name" || name === "short_description") ? value.trim() : value;
+    const trimmedValue = name === "short_description" ? value.trim() : value;
     if (name === "name") {
       setErrors((prevErrors) => ({
         ...prevErrors,
@@ -704,7 +735,7 @@ const EditProduct = () => {
       productData.append("id_category", formData.id_category);
       productData.append("id_brand", formData.id_brand);
       productData.append("short_description", formData.short_description);
-      productData.append("description", formData.description);
+      productData.append("description", cleanHtmlContent(formData.description));
       productData.append(
         "option",
         JSON.stringify(

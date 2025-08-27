@@ -178,8 +178,9 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    if (newAddress.cityOrProvince) {
-      const selectedCity = cities.find((c) => c.name === newAddress.cityOrProvince);
+    if (formData.cityOrProvince || newAddress.cityOrProvince) {
+      const city = formData.cityOrProvince || newAddress.cityOrProvince;
+      const selectedCity = cities.find((c) => c.name === city);
       if (selectedCity) {
         fetch(`https://provinces.open-api.vn/api/p/${selectedCity.code}?depth=2`)
           .then((res) => res.json())
@@ -190,11 +191,12 @@ export default function CheckoutPage() {
       setDistricts([]);
     }
     setWards([]);
-  }, [newAddress.cityOrProvince, cities]);
+  }, [formData.cityOrProvince, newAddress.cityOrProvince, cities]);
 
   useEffect(() => {
-    if (newAddress.district) {
-      const selectedDistrict = districts.find((d) => d.name === newAddress.district);
+    if (formData.district || newAddress.district) {
+      const district = formData.district || newAddress.district;
+      const selectedDistrict = districts.find((d) => d.name === district);
       if (selectedDistrict) {
         fetch(`https://provinces.open-api.vn/api/d/${selectedDistrict.code}?depth=2`)
           .then((res) => res.json())
@@ -204,7 +206,7 @@ export default function CheckoutPage() {
     } else {
       setWards([]);
     }
-  }, [newAddress.district, districts]);
+  }, [formData.district, newAddress.district, districts]);
 
   useEffect(() => {
     if (!isClient || hasCheckedOut) return;
@@ -228,12 +230,14 @@ export default function CheckoutPage() {
     }).format(numericPrice);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === "paymentMethod" && value !== "bank" && value !== "cod") return;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === "cityOrProvince" ? { district: "", ward: "" } : {}),
+      ...(name === "district" ? { ward: "" } : {}),
     }));
   };
 
@@ -651,41 +655,54 @@ export default function CheckoutPage() {
                   onChange={handleChange}
                   required
                 />
-                <input
-                  type="text"
-                  name="ward"
-                  placeholder="Xã/Phường (ví dụ: Phường Tân Chánh Hiệp) *"
-                  value={formData.ward}
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="text"
-                  name="district"
-                  placeholder="Quận/Huyện (ví dụ: Quận 12) *"
-                  value={formData.district}
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="text"
+                <select
                   name="cityOrProvince"
-                  placeholder="Tỉnh/Thành phố (ví dụ: TP Hồ Chí Minh) *"
+                  title="Tỉnh/Thành phố"
                   value={formData.cityOrProvince}
                   onChange={handleChange}
                   required
-                />
+                >
+                  <option value="">Chọn tỉnh/thành phố</option>
+                  {cities.map((city) => (
+                    <option key={city.code} value={city.name}>{city.name}</option>
+                  ))}
+                </select>
+                <select
+                  name="district"
+                  title="Quận/Huyện"
+                  value={formData.district}
+                  onChange={handleChange}
+                  required
+                  disabled={!formData.cityOrProvince}
+                >
+                  <option value="">Chọn quận/huyện</option>
+                  {districts.map((district) => (
+                    <option key={district.code} value={district.name}>{district.name}</option>
+                  ))}
+                </select>
+                <select
+                  name="ward"
+                  title="Xã/Phường"
+                  value={formData.ward}
+                  onChange={handleChange}
+                  required
+                  disabled={!formData.district}
+                >
+                  <option value="">Chọn phường/xã</option>
+                  {wards.map((ward) => (
+                    <option key={ward.code} value={ward.name}>{ward.name}</option>
+                  ))}
+                </select>
                 <input
-                type="text"
-                name="sdt"
-                placeholder="Số điện thoại (ví dụ: 0342031354) *"
-                value={formData.sdt}
-                onChange={handleChange} 
-                className={styles.input}
-                pattern="[0-9]{10}"
-                title="Số điện thoại phải có 10 chữ số"
-              />
-
+                  type="text"
+                  name="sdt"
+                  placeholder="Số điện thoại (ví dụ: 0342031354) *"
+                  value={formData.sdt}
+                  onChange={handleChange}
+                  className={styles.input}
+                  pattern="[0-9]{10}"
+                  title="Số điện thoại phải có 10 chữ số"
+                />
                 <textarea
                   name="note"
                   placeholder="Ghi chú cho đơn hàng của bạn (ví dụ: Giao nhanh lên nhé)"
