@@ -666,7 +666,7 @@ export default function CartPage() {
                     : formatPrice(coupon.discountValue);
 
                   // Format expiry date to show only day/month/year
-                  const formatExpiryDate = (date) => {
+                  const formatExpiryDate = (date: string | number | Date | null) => {
                     if (!date) return "Không giới hạn";
                     const expiry = new Date(date);
                     return expiry.toLocaleDateString('vi-VN', {

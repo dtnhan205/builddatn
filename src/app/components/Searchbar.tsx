@@ -103,7 +103,7 @@ export default function SearchBar() {
           console.log("Fetched products:", validProducts);
         } else if (Array.isArray(data.products)) {
           const validProducts = data.products.filter(
-            (product): product is Product =>
+            (product: { name: any; images: any; option: any; }): product is Product =>
               product &&
               typeof product.name === "string" &&
               Array.isArray(product.images) &&
