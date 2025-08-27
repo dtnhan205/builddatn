@@ -202,6 +202,8 @@ const renderShippingStatus = (order: Order) => (
     className={`${styles.statusButton} ${
       order.shippingStatus === "pending"
         ? styles.pending
+        : order.shippingStatus === "confirmed"
+        ? styles.confirmed // Add style for confirmed status
         : order.shippingStatus === "in_transit"
         ? styles.intransit
         : order.shippingStatus === "delivered"
@@ -210,11 +212,15 @@ const renderShippingStatus = (order: Order) => (
         ? styles.cancelled
         : order.shippingStatus === "failed"
         ? styles.failed
-        : styles.returned
+        : order.shippingStatus === "returned"
+        ? styles.returned
+        : styles.pending // Fallback for unexpected statuses
     }`}
   >
     {order.shippingStatus === "pending"
       ? "Đang chờ xử lý"
+      : order.shippingStatus === "confirmed"
+      ? "Đã xác nhận" // Add translation for confirmed status
       : order.shippingStatus === "in_transit"
       ? "Đang giao"
       : order.shippingStatus === "delivered"
@@ -223,7 +229,9 @@ const renderShippingStatus = (order: Order) => (
       ? "Hủy hàng"
       : order.shippingStatus === "failed"
       ? "Giao hàng thất bại"
-      : "Hoàn hàng"}
+      : order.shippingStatus === "returned"
+      ? "Hoàn hàng"
+      : "Trạng thái không xác định"}
   </span>
 );
 
@@ -252,6 +260,8 @@ const renderOrderStatus = (order: Order) => (
       className={`${styles.statusButton} ${
         order.shippingStatus === "pending"
           ? styles.pending
+          : order.shippingStatus === "confirmed"
+          ? styles.confirmed
           : order.shippingStatus === "in_transit"
           ? styles.intransit
           : order.shippingStatus === "delivered"
@@ -260,12 +270,16 @@ const renderOrderStatus = (order: Order) => (
           ? styles.cancelled
           : order.shippingStatus === "failed"
           ? styles.failed
-          : styles.returned
+          : order.shippingStatus === "returned"
+          ? styles.returned
+          : styles.pending // Fallback to pending for safety, though schema enforces valid values
       }`}
       style={{ marginLeft: 8 }}
     >
       {order.shippingStatus === "pending"
         ? "Chờ giao hàng"
+        : order.shippingStatus === "confirmed"
+        ? "Đã xác nhận"
         : order.shippingStatus === "in_transit"
         ? "Đang giao"
         : order.shippingStatus === "delivered"
@@ -274,7 +288,9 @@ const renderOrderStatus = (order: Order) => (
         ? "Đã hủy"
         : order.shippingStatus === "failed"
         ? "Giao hàng thất bại"
-        : "Đã trả hàng"}
+        : order.shippingStatus === "returned"
+        ? "Đã trả hàng"
+        : "Trạng thái không xác định"}
     </span>
     {order.returnStatus !== "none" && (
       <span

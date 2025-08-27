@@ -4,7 +4,7 @@ import styles from './ToastNotification.module.css';
 // Định nghĩa kiểu cho props
 interface ToastNotificationProps {
   message: string;
-  type: 'error' | 'success' | 'warning' | null;
+  type: 'error' | 'success' | 'warning' | 'info' | null;
   onClose: () => void;
 }
 

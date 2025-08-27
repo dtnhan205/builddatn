@@ -32,26 +32,32 @@ interface Address {
 }
 
 interface Order {
-  sdt: string;
-  cancelNote: React.JSX.Element;
-  paymentMethod: string;
   _id: string;
   user: { _id: string; username: string; email: string } | null;
-  createdAt: string;
-  paymentStatus: string;
-  shippingStatus: "pending" | "in_transit" | "delivered" | "returned" | "cancelled" | "failed";
+  items: { product: Product | null; optionId: string; quantity: number; images: string[] }[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  address: Address;
+  sdt: string;
+  paymentMethod: string;
+  paymentStatus: "pending" | "completed" | "failed" | "cancelled";
+  shippingStatus: "pending" | "confirmed" | "in_transit" | "delivered" | "returned" | "cancelled" | "failed";
   returnStatus: "none" | "requested" | "approved" | "rejected";
   returnReason?: string;
   returnRequestDate?: string;
   returnImages?: { url: string; public_id: string }[];
   returnVideos?: { url: string; public_id: string }[];
   cancelReason?: string;
+  cancelNote?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
   failReason?: string;
-  address: Address;
-  subtotal: number;
-  discount: number;
-  total: number;
-  items: { product: Product | null; optionId: string; quantity: number; images: string[] }[];
+  confirmedAt?: string;
+  createdAt: string;
+  isCancelled?: boolean;
+  isFailed?: boolean;
+  isConfirmed?: boolean;
 }
 
 const API_BASE_URL = "https://api-zeal.onrender.com";
@@ -92,6 +98,11 @@ const OrderPage: React.FC = () => {
   const router = useRouter();
 
   const cancelReasons: { value: string; label: string }[] = [
+    { value: "Đổi ý không mua nữa", label: "Đổi ý không mua nữa" },
+    { value: "Muốn thay đổi sản phẩm", label: "Muốn thay đổi sản phẩm" },
+    { value: "Thay đổi phương thức thanh toán", label: "Thay đổi phương thức thanh toán" },
+    { value: "Thay đổi địa chỉ giao hàng", label: "Thay đổi địa chỉ giao hàng" },
+    { value: "Lý do khác", label: "Lý do khác" },
     { value: "out_of_stock", label: "Hết hàng" },
     { value: "customer_cancelled", label: "Khách hủy" },
     { value: "system_error", label: "Lỗi hệ thống" },
@@ -114,6 +125,7 @@ const OrderPage: React.FC = () => {
 
   const shippingStatusMapping: { [key: string]: string } = {
     pending: "Chờ xử lý",
+    confirmed: "Đã xác nhận",
     in_transit: "Đang vận chuyển",
     delivered: "Đã giao hàng",
     returned: "Hoàn hàng",
@@ -129,6 +141,11 @@ const OrderPage: React.FC = () => {
   };
 
   const cancelReasonMapping: { [key: string]: string } = {
+    "Đổi ý không mua nữa": "Đổi ý không mua nữa",
+    "Muốn thay đổi sản phẩm": "Muốn thay đổi sản phẩm",
+    "Thay đổi phương thức thanh toán": "Thay đổi phương thức thanh toán",
+    "Thay đổi địa chỉ giao hàng": "Thay đổi địa chỉ giao hàng",
+    "Lý do khác": "Lý do khác",
     out_of_stock: "Hết hàng",
     customer_cancelled: "Khách hủy",
     system_error: "Lỗi hệ thống",
@@ -144,6 +161,7 @@ const OrderPage: React.FC = () => {
 
   const reverseShippingStatusMapping: { [key: string]: string } = {
     "Chờ xử lý": "pending",
+    "Đã xác nhận": "confirmed",
     "Đang vận chuyển": "in_transit",
     "Đã giao hàng": "delivered",
     "Hoàn hàng": "returned",
@@ -157,7 +175,8 @@ const OrderPage: React.FC = () => {
   };
 
   const statusProgression: { [key: string]: string[] } = {
-    pending: ["in_transit", "cancelled"],
+    pending: ["confirmed", "cancelled"],
+    confirmed: ["in_transit", "cancelled", "failed"],
     in_transit: ["delivered", "failed"],
     delivered: ["returned"],
     returned: [],
@@ -168,6 +187,7 @@ const OrderPage: React.FC = () => {
   const allStatuses: { value: string; label: string }[] = [
     { value: "all", label: "Tất cả trạng thái" },
     { value: "pending", label: "Chờ xử lý" },
+    { value: "confirmed", label: "Đã xác nhận" },
     { value: "in_transit", label: "Đang vận chuyển" },
     { value: "failed", label: "Giao hàng thất bại" },
     { value: "delivered", label: "Đã giao hàng" },
@@ -256,12 +276,15 @@ const OrderPage: React.FC = () => {
 
         const normalizedOrders = data.map((order) => ({
           ...order,
-          shippingStatus: ["pending", "in_transit", "delivered", "returned", "cancelled", "failed"].includes(order.shippingStatus)
+          shippingStatus: ["pending", "confirmed", "in_transit", "delivered", "returned", "cancelled", "failed"].includes(order.shippingStatus)
             ? order.shippingStatus
             : "pending",
           returnStatus: ["none", "requested", "approved", "rejected"].includes(order.returnStatus)
             ? order.returnStatus
             : "none",
+          isCancelled: order.shippingStatus === "cancelled" && order.paymentStatus === "cancelled",
+          isFailed: order.shippingStatus === "failed" && order.paymentStatus === "failed",
+          isConfirmed: order.shippingStatus === "confirmed",
         }));
 
         setOrders(normalizedOrders);
@@ -372,16 +395,16 @@ const OrderPage: React.FC = () => {
     if (type === "shipping") {
       const englishStatus = reverseShippingStatusMapping[newStatus] || newStatus;
       if (englishStatus === "cancelled") {
-        if (currentStatus !== "pending") {
-          showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý", "error");
+        if (!['pending', 'confirmed'].includes(currentStatus) || order.paymentStatus !== 'pending') {
+          showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý hoặc Đã xác nhận và chưa thanh toán", "error");
           return;
         }
         setShowConfirm({ orderId, newStatus, currentStatus, type: "cancel", cancelReason: "" });
         setSelectedCancelReason("");
         setCancelReasonInput("");
       } else if (englishStatus === "failed") {
-        if (currentStatus !== "in_transit") {
-          showNotification("Chỉ có thể đánh dấu thất bại khi trạng thái là Đang vận chuyển", "error");
+        if (!['confirmed', 'in_transit'].includes(currentStatus)) {
+          showNotification("Chỉ có thể đánh dấu thất bại khi trạng thái là Đã xác nhận hoặc Đang vận chuyển", "error");
           return;
         }
         if (order.paymentStatus === "completed") {
@@ -407,16 +430,16 @@ const OrderPage: React.FC = () => {
       showNotification("Chỉ có thể thay đổi trạng thái hoàn hàng khi trạng thái là Đã yêu cầu", "error");
       return;
     } else if (type === "cancel") {
-      if (currentStatus !== "pending") {
-        showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý", "error");
+      if (!['pending', 'confirmed'].includes(currentStatus) || order.paymentStatus !== 'pending') {
+        showNotification("Chỉ có thể hủy đơn hàng khi trạng thái là Chờ xử lý hoặc Đã xác nhận và chưa thanh toán", "error");
         return;
       }
       setShowConfirm({ orderId, newStatus, currentStatus, type, cancelReason: "" });
       setSelectedCancelReason("");
       setCancelReasonInput("");
     } else if (type === "fail") {
-      if (currentStatus !== "in_transit") {
-        showNotification("Chỉ có thể đánh dấu thất bại khi trạng thái là Đang vận chuyển", "error");
+      if (!['confirmed', 'in_transit'].includes(currentStatus)) {
+        showNotification("Chỉ có thể đánh dấu thất bại khi trạng thái là Đã xác nhận hoặc Đang vận chuyển", "error");
         return;
       }
       if (order.paymentStatus === "completed") {
@@ -436,7 +459,15 @@ const OrderPage: React.FC = () => {
 
     const { orderId, newStatus, currentStatus, type, cancelReason, failReason } = showConfirm;
     let englishStatus: string;
-    let updatePayload: { shippingStatus?: string; paymentStatus?: string; returnStatus?: string; cancelReason?: string; failReason?: string };
+    let updatePayload: { 
+      shippingStatus?: string; 
+      paymentStatus?: string; 
+      returnStatus?: string; 
+      cancelReason?: string; 
+      failReason?: string; 
+      confirmedAt?: Date;
+      cancelledAt?: Date;
+    };
 
     const order = orders.find((o) => o._id === orderId);
     if (!order) {
@@ -446,7 +477,10 @@ const OrderPage: React.FC = () => {
 
     if (type === "shipping") {
       englishStatus = reverseShippingStatusMapping[newStatus] || newStatus;
-      updatePayload = { shippingStatus: englishStatus };
+      updatePayload = { 
+        shippingStatus: englishStatus,
+        ...(englishStatus === "confirmed" && { confirmedAt: new Date() })
+      };
       if (englishStatus === "delivered") {
         updatePayload.paymentStatus = "completed";
       }
@@ -460,6 +494,7 @@ const OrderPage: React.FC = () => {
       updatePayload = {
         shippingStatus: englishStatus,
         cancelReason: finalCancelReason,
+        cancelledAt: new Date(),
         ...(order.paymentStatus === "completed" && { paymentStatus: "cancelled" }),
       };
     } else if (type === "fail") {
@@ -539,12 +574,15 @@ const OrderPage: React.FC = () => {
 
           const normalizedOrders = data.map((order) => ({
             ...order,
-            shippingStatus: ["pending", "in_transit", "delivered", "returned", "cancelled", "failed"].includes(order.shippingStatus)
+            shippingStatus: ["pending", "confirmed", "in_transit", "delivered", "returned", "cancelled", "failed"].includes(order.shippingStatus)
               ? order.shippingStatus
               : "pending",
             returnStatus: ["none", "requested", "approved", "rejected"].includes(order.returnStatus)
               ? order.returnStatus
               : "none",
+            isCancelled: order.shippingStatus === "cancelled" && order.paymentStatus === "cancelled",
+            isFailed: order.shippingStatus === "failed" && order.paymentStatus === "failed",
+            isConfirmed: order.shippingStatus === "confirmed",
           }));
 
           setOrders(normalizedOrders);
@@ -560,7 +598,9 @@ const OrderPage: React.FC = () => {
 
       showNotification(
         type === "shipping"
-          ? "Cập nhật trạng thái vận chuyển thành công"
+          ? englishStatus === "confirmed"
+            ? "Xác nhận đơn hàng thành công"
+            : "Cập nhật trạng thái vận chuyển thành công"
           : type === "cancel"
           ? "Hủy đơn hàng thành công"
           : type === "fail"
@@ -705,12 +745,15 @@ const OrderPage: React.FC = () => {
                 }
                 const normalizedOrders = data.map((order) => ({
                   ...order,
-                  shippingStatus: ["pending", "in_transit", "delivered", "returned", "cancelled", "failed"].includes(order.shippingStatus)
+                  shippingStatus: ["pending", "confirmed", "in_transit", "delivered", "returned", "cancelled", "failed"].includes(order.shippingStatus)
                     ? order.shippingStatus
                     : "pending",
                   returnStatus: ["none", "requested", "approved", "rejected"].includes(order.returnStatus)
                     ? order.returnStatus
                     : "none",
+                  isCancelled: order.shippingStatus === "cancelled" && order.paymentStatus === "cancelled",
+                  isFailed: order.shippingStatus === "failed" && order.paymentStatus === "failed",
+                  isConfirmed: order.shippingStatus === "confirmed",
                 }));
                 setOrders(normalizedOrders);
                 setFilteredOrders(normalizedOrders);
@@ -854,9 +897,9 @@ const OrderPage: React.FC = () => {
                               value={status.label}
                               disabled={
                                 status.value === "cancelled"
-                                  ? order.shippingStatus !== "pending"
+                                  ? !['pending', 'confirmed'].includes(order.shippingStatus) || order.paymentStatus !== "pending"
                                   : status.value === "failed"
-                                  ? order.shippingStatus !== "in_transit" || order.paymentStatus === "completed"
+                                  ? !['confirmed', 'in_transit'].includes(order.shippingStatus) || order.paymentStatus === "completed"
                                   : status.value === "returned"
                                   ? order.shippingStatus !== "delivered" || order.returnStatus !== "approved"
                                   : ["returned", "cancelled", "failed"].includes(order.shippingStatus) ||
@@ -976,6 +1019,8 @@ const OrderPage: React.FC = () => {
                 ? "Xác nhận đánh dấu giao hàng thất bại"
                 : showConfirm.type === "return"
                 ? "Xác nhận thay đổi trạng thái hoàn hàng"
+                : showConfirm.newStatus === "Đã xác nhận"
+                ? "Xác nhận đơn hàng"
                 : "Xác nhận thay đổi trạng thái"}
             </h2>
             {showConfirm.type === "cancel" ? (
@@ -1049,7 +1094,9 @@ const OrderPage: React.FC = () => {
               <p>
                 Bạn có chắc chắn muốn{" "}
                 {showConfirm.type === "shipping"
-                  ? `chuyển trạng thái vận chuyển sang ${showConfirm.newStatus}`
+                  ? showConfirm.newStatus === "Đã xác nhận"
+                    ? `xác nhận đơn hàng`
+                    : `chuyển trạng thái vận chuyển sang ${showConfirm.newStatus}`
                   : `chuyển trạng thái hoàn hàng sang ${showConfirm.newStatus}`}?
                 {showConfirm.type === "shipping" && showConfirm.newStatus === "Đã giao hàng" && (
                   <>
@@ -1130,6 +1177,12 @@ const OrderPage: React.FC = () => {
                   <h4>Thông tin đơn hàng</h4>
                   <div className={styles.detailsGrid}>
                     <p>Ngày: {formatDate(selectedOrder.createdAt)}</p>
+                    {selectedOrder.confirmedAt && selectedOrder.isConfirmed && (
+                      <p>Ngày xác nhận: {formatDate(selectedOrder.confirmedAt)}</p>
+                    )}
+                    {selectedOrder.cancelledAt && selectedOrder.isCancelled && (
+                      <p>Ngày hủy: {formatDate(selectedOrder.cancelledAt)}</p>
+                    )}
                     <p>Trạng thái thanh toán: {getVietnamesePaymentStatus(selectedOrder.paymentStatus)}</p>
                     <p>Trạng thái vận chuyển: {getVietnameseShippingStatus(selectedOrder.shippingStatus)}</p>
                     <p>

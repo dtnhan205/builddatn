@@ -348,7 +348,7 @@ export default function Home() {
                   console.log("Banner Sale image load failed, switched to 404 fallback");
                 }}
               />
-              <a href="/user/product">
+              <a href="/user/productsale">
                 <button className={styles.buyNowButton}>Mua Ngay</button>
               </a>
             </div>

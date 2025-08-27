@@ -58,6 +58,7 @@ interface Message {
   role: "user" | "model";
   content: string;
   file?: { data: string; mime_type: string } | null;
+  imageBase64?: string;
   timestamp: string;
   products?: Product[];
   coupons?: Coupon[];
@@ -74,6 +75,7 @@ const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<{ data: string; mime_type: string } | null>(null);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -140,7 +142,7 @@ const Chatbot: React.FC = () => {
       }
 
       const data = await response.json();
-      setMessages(data.messages || []); // Đảm bảo mảng messages chứa products
+      setMessages(data.messages || []);
     } catch (error) {
       console.error("Lỗi lấy lịch sử chat:", error);
       setError(`Không thể lấy lịch sử chat: ${(error as Error).message}`);
@@ -149,12 +151,12 @@ const Chatbot: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || !sessionId || error) return;
+    if (!input.trim() && !file || !sessionId || error) return;
 
     const newMessage: Message = {
       sessionId: sessionId,
       role: "user",
-      content: input,
+      content: input || (file ? "Phân tích tình trạng da từ hình ảnh" : ""),
       file: file ? file : null,
       timestamp: new Date().toISOString(),
     };
@@ -162,21 +164,31 @@ const Chatbot: React.FC = () => {
     setMessages([...messages, newMessage]);
     setInput("");
     setFile(null);
+    setPreviewFile(null); // Xóa preview sau khi gửi
     setIsLoading(true);
 
     try {
-      const sendData = {
-        sessionId,
-        message: newMessage.content,
-        ...(file && { file: file }),
-      };
-      const response = await fetch(`${API_BASE_URL}/send`, {
+      const formData = new FormData();
+      formData.append("sessionId", sessionId);
+      if (input) formData.append("message", input);
+      if (file) {
+        const byteCharacters = atob(file.data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: file.mime_type });
+        formData.append("image", blob, `skin-image.${file.mime_type.split("/")[1]}`);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/analyze-skin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sendData),
+        body: formData,
       });
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
+
       setMessages((prev) => [
         ...prev,
         {
@@ -221,12 +233,22 @@ const Chatbot: React.FC = () => {
       return;
     }
 
+    // Tạo URL preview
+    const previewUrl = URL.createObjectURL(fileInput);
+    setPreviewFile(fileInput); // Lưu file gốc để preview
+
     const reader = new FileReader();
     reader.onload = () => {
       const base64String = (reader.result as string).split(",")[1];
       setFile({ data: base64String, mime_type: fileInput.type });
     };
     reader.readAsDataURL(fileInput);
+  };
+
+  const handleRemovePreview = () => {
+    setPreviewFile(null);
+    setFile(null);
+    if (inputRef.current) inputRef.current.focus();
   };
 
   const handleEmojiSelect = (emoji: { native: string }) => {
@@ -236,7 +258,7 @@ const Chatbot: React.FC = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey && input.trim() && window.innerWidth > 768) {
+    if (e.key === "Enter" && !e.shiftKey && (input.trim() || file) && window.innerWidth > 768) {
       e.preventDefault();
       handleSendMessage(e as any);
     }
@@ -247,18 +269,13 @@ const Chatbot: React.FC = () => {
       inputRef.current.style.height = "auto";
       inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
     }
-    // Cuộn xuống khi messages thay đổi
-    if (chatBodyRef.current) {
-      chatBodyRef.current.scrollTo({ behavior: "smooth", top: chatBodyRef.current.scrollHeight });
-    }
-  }, [input]); // Chỉ phụ thuộc vào input thay vì messages
+  }, [input]);
 
-  // Thêm useEffect riêng để xử lý cuộn khi messages thay đổi
   useEffect(() => {
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTo({ behavior: "smooth", top: chatBodyRef.current.scrollHeight });
     }
-  }, [messages.length]); // Chỉ phụ thuộc vào độ dài của messages
+  }, [messages.length]);
 
   if (error) {
     return (
@@ -292,7 +309,7 @@ const Chatbot: React.FC = () => {
           </button>
         </div>
         <div ref={chatBodyRef} className="chat-body">
-          {isLoading && <div className="loading">Đang xử lý...</div>}
+          {isLoading && <div className="loading">...</div>}
           {messages.map((msg, index) => (
             <div
               key={index}
@@ -326,9 +343,13 @@ const Chatbot: React.FC = () => {
                     return <span key={index}>{part} </span>;
                   })}
                 </div>
-                {msg.file?.data && (
+                {(msg.file?.data || msg.imageBase64) && (
                   <img
-                    src={`data:${msg.file.mime_type};base64,${msg.file.data}`}
+                    src={
+                      msg.file?.data
+                        ? `data:${msg.file.mime_type};base64,${msg.file.data}`
+                        : `data:image/jpeg;base64,${msg.imageBase64}`
+                    }
                     alt="Attachment"
                     className="attachment"
                   />
@@ -349,8 +370,13 @@ const Chatbot: React.FC = () => {
                           )}
                           <div className="product-info">
                             <h5 className="product-name">{product.name}</h5>
+                            <p className="product-price">
+                              {product.price
+                                ? `${product.price.toLocaleString("vi-VN")} VNĐ`
+                                : "Liên hệ"}
+                            </p>
                             <a
-                              href={`http://localhost:3000/user/detail/${product.slug || convertToSlug(product.name)}`}
+                              href={`https://purebotanica.online/user/detail/${product.slug || convertToSlug(product.name)}`}
                               className="product-link"
                             >
                               Xem
@@ -371,6 +397,12 @@ const Chatbot: React.FC = () => {
                             {coupon.discountType === "percentage"
                               ? `${coupon.discountValue}%`
                               : `${coupon.discountValue.toLocaleString("vi-VN")} VNĐ`}
+                            {coupon.minOrderValue > 0 && (
+                              <span> (Tối thiểu: {coupon.minOrderValue.toLocaleString("vi-VN")} VNĐ)</span>
+                            )}
+                            {coupon.expiryDate && (
+                              <span> (Hết hạn: {new Date(coupon.expiryDate).toLocaleDateString("vi-VN")})</span>
+                            )}
                           </p>
                           <button
                             className="copy-coupon-btn"
@@ -389,8 +421,18 @@ const Chatbot: React.FC = () => {
                       {msg.news.slice(0, 2).map((news, idx) => (
                         <div key={idx} className="news-card">
                           <h5 className="news-title">{news.title}</h5>
+                          {news.thumbnailUrl && (
+                            <img
+                              src={news.thumbnailUrl}
+                              alt={news.title}
+                              className="news-thumbnail"
+                            />
+                          )}
+                          <p className="news-date">
+                            {news.publishedAt && `Đăng lúc: ${new Date(news.publishedAt).toLocaleDateString("vi-VN")}`}
+                          </p>
                           <a
-                            href={`https://purebotanice.com/news/${news.slug}`}
+                            href={`https://purebotanica.online/news/${news.slug}`}
                             className="news-link"
                           >
                             Đọc
@@ -402,7 +444,18 @@ const Chatbot: React.FC = () => {
                 )}
                 {msg.brands && msg.brands.length > 0 && (
                   <div className="brands-list">
-                    <p>{msg.brands.slice(0, 2).map((brand) => brand.name).join(", ")}</p>
+                    {msg.brands.slice(0, 2).map((brand, idx) => (
+                      <div key={idx} className="brand-item">
+                        {brand.logoImg && (
+                          <img
+                            src={brand.logoImg}
+                            alt={brand.name}
+                            className="brand-logo"
+                          />
+                        )}
+                        <p>{brand.name}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {msg.categories && msg.categories.length > 0 && (
@@ -416,15 +469,43 @@ const Chatbot: React.FC = () => {
         </div>
         <div className="chat-footer">
           <form onSubmit={handleSendMessage} className="chat-form">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Nhắn..."
-              className="message-input"
-              required
-            />
+            <div className="input-wrapper">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Nhắn..."
+                className="message-input"
+                required={!file && !previewFile}
+              />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleFileChange}
+                className="file-input"
+                id="file-upload"
+              />
+              <label htmlFor="file-upload" className="file-upload-label">
+                📎
+              </label>
+              {previewFile && (
+                <div className="preview-wrapper">
+                  <img
+                    src={URL.createObjectURL(previewFile)}
+                    alt="Preview"
+                    className="preview-image"
+                  />
+                  <button
+                    type="button"
+                    className="preview-remove"
+                    onClick={handleRemovePreview}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="chat-controls">
               <button type="submit" id="send-message" disabled={isLoading}>
                 ↑

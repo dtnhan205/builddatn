@@ -202,19 +202,54 @@
 }
 
 /* Delivered status */
+/* Pending status */
+.pending {
+  background-color: #E0E0E0; /* Light gray - neutral, indicating waiting */
+  color: #333333; /* Dark text for contrast */
+}
+
+.pending:hover {
+  background-color: #D0D0D0; /* Slightly darker gray for hover */
+  transform: translateY(-1px);
+}
+
+/* Confirmed status */
+.confirmed {
+  background-color: #3498DB; /* Blue - indicates confirmation or approval */
+  color: #FFFFFF; /* White text for contrast */
+}
+
+.confirmed:hover {
+  background-color: #2980B9; /* Slightly darker blue for hover */
+  transform: translateY(-1px);
+}
+
+/* In_transit status */
+.intransit {
+  background-color: #F1C40F; /* Yellow - indicates ongoing process */
+  color: #333333; /* Dark text for contrast */
+}
+
+.intransit:hover {
+  background-color: #D4AC0D; /* Slightly darker yellow for hover */
+  transform: translateY(-1px);
+}
+
+/* Delivered status */
 .delivered {
-  background-color: #2ECC71; /* Green */
+  background-color: #2ECC71; /* Green - indicates success */
+  color: #FFFFFF; /* White text for contrast */
 }
 
 .delivered:hover {
   background-color: #27AE60; /* Slightly darker green for hover */
   transform: translateY(-1px);
 }
-.failed {
-  background-color: #e74c3c; }
+
 /* Cancelled status */
 .cancelled {
-  background-color: #E74C3C; /* Red */
+  background-color: #E74C3C; /* Red - indicates cancellation or error */
+  color: #FFFFFF; /* White text for contrast */
 }
 
 .cancelled:hover {
@@ -222,13 +257,25 @@
   transform: translateY(-1px);
 }
 
+/* Failed status */
+.failed {
+  background-color: #C0392B; /* Darker red - distinct from cancelled, indicates failure */
+  color: #FFFFFF; /* White text for contrast */
+}
+
+.failed:hover {
+  background-color: #A93226; /* Slightly darker red for hover */
+  transform: translateY(-1px);
+}
+
 /* Returned status */
 .returned {
-  background-color: #9B59B6; /* Purple */
+  background-color: #8E44AD; /* Purple - indicates a unique status (return) */
+  color: #FFFFFF; /* White text for contrast */
 }
 
 .returned:hover {
-  background-color: #8E44AD; /* Slightly darker purple for hover */
+  background-color: #7D3C98; /* Slightly darker purple for hover */
   transform: translateY(-1px);
 }
 

@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap'); 
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap');
+
 * {
- font-family: 'Roboto Slab', serif;
+  font-family: 'Roboto Slab', serif;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -575,7 +576,7 @@ body.show-chatbot .chatbot-popup {
   width: 35px;
   height: 35px;
   flex-shrink: 0;
-  object-fit: contain; 
+  object-fit: contain;
 }
 
 .header-info .logo-text {
@@ -626,7 +627,15 @@ body.show-chatbot .chatbot-popup {
   gap: 11px;
   align-items: center;
 }
+.chat-body .message .message-content ul {
+  margin: 10px 0 10px 20px; /* Thêm lề cho danh sách */
+  padding-left: 0; /* Loại bỏ padding mặc định của ul */
+}
 
+.chat-body .message .message-content ul li {
+  margin-bottom: 8px; /* Khoảng cách giữa các mục danh sách */
+  list-style-type: disc; /* Thêm dấu đầu dòng cho danh sách */
+}
 .chat-body .message .bot-avatar {
   width: 35px;
   height: 35px;
@@ -639,11 +648,14 @@ body.show-chatbot .chatbot-popup {
 
 .chat-body .message .message-text {
   padding: 12px 16px;
-  max-width: 75%;
+  /* max-width: 75%; */
   width: fit-content;
   display: inline-block;
   font-size: 0.95rem;
   margin-right: 2px;
+  margin: 5px 0; 
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .chat-body .bot-message.thinking .message-text {
@@ -658,6 +670,7 @@ body.show-chatbot .chatbot-popup {
 .chat-body .user-message {
   flex-direction: column;
   align-items: flex-end;
+  margin-right: 0px;
 }
 
 .chat-body .user-message .message-text {
@@ -730,18 +743,168 @@ body.show-chatbot .chatbot-popup {
   outline: 2px solid #1E90FF;
 }
 
-.chat-form .message-input {
+.chat-form .input-wrapper {
+  position: relative;
   width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.chat-form .message-input {
+  width: 60%;
   height: 47px !important;
   outline: none;
   resize: none;
   border: none;
   max-height: 180px;
   scrollbar-width: thin;
-  border-radius: inherit;
+  border-radius: 32px;
   font-size: 0.95rem;
   padding: 14px 0 12px 18px;
   scrollbar-color: transparent transparent;
+}
+
+.chat-form .file-input {
+  display: none;
+}
+
+.chat-form .file-upload-label {
+  position: absolute;
+  right: 20px; /* Điều chỉnh vị trí dựa trên giao diện */
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 20px;
+  color: #555;
+  background: none;
+  border: none;
+  padding: 5px;
+}
+/* Preview Image Styles */
+.preview-wrapper {
+  position: absolute;
+  right: 70px; /* Điều chỉnh vị trí dựa trên giao diện */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.preview-image {
+  max-width: 50px;
+  max-height: 50px;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+}
+
+.preview-remove {
+  background: none;
+  border: none;
+  color: #ff4444;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s ease;
+}
+
+.preview-remove:hover {
+  color: #cc0000;
+}
+
+/* Responsive Adjustments */
+@media (min-width: 431px) and (max-width: 960px) {
+  .preview-wrapper {
+    right: 80px; /* Điều chỉnh cho tablet */
+  }
+
+  .preview-image {
+    max-width: 40px;
+    max-height: 40px;
+  }
+}
+
+@media (max-width: 430px) {
+  .preview-wrapper {
+    right: 70px; /* Điều chỉnh cho mobile */
+  }
+
+  .preview-image {
+    max-width: 35px;
+    max-height: 35px;
+  }
+
+  .preview-remove {
+    font-size: 14px;
+  }
+}
+/* Styles cho hình ảnh từ lịch sử */
+.attachment {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 5px;
+  margin-top: 10px;
+  object-fit: cover;
+}
+
+/* Styles cho sản phẩm với giá */
+.product-price {
+  color: #28a745;
+  font-size: 0.9em;
+  margin: 5px 0;
+}
+
+/* Styles cho mã giảm giá với thông tin thêm */
+.coupon-card p {
+  margin: 5px 0;
+  font-size: 0.9em;
+}
+.coupon-card span {
+  color: #6c757d;
+  font-size: 0.8em;
+}
+
+/* Styles cho tin tức với thumbnail và ngày */
+.news-thumbnail {
+  max-width: 50px;
+  max-height: 50px;
+  object-fit: cover;
+  margin: 5px 0;
+}
+.news-date {
+  font-size: 0.7em;
+  color: #6c757d;
+  margin: 5px 0;
+}
+
+/* Styles cho thương hiệu với logo */
+.brand-item {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+.brand-logo {
+  max-width: 30px;
+  max-height: 30px;
+  margin-right: 10px;
+  object-fit: contain;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 430px) {
+  .attachment {
+    max-width: 150px;
+    max-height: 150px;
+  }
+  .news-thumbnail {
+    max-width: 40px;
+    max-height: 40px;
+  }
+  .brand-logo {
+    max-width: 25px;
+    max-height: 25px;
+  }
 }
 
 .chat-form .chat-controls {
@@ -766,7 +929,7 @@ body.show-chatbot .chatbot-popup {
 }
 
 .chat-form .chat-controls button:hover,
-body.show-emoji-picker .chat-controls #emoji-picker {
+body.show-emoji-picker .chat-controls #emoji-btn {
   color: #4169E1;
   background: #f1f1ff;
 }
@@ -781,61 +944,8 @@ body.show-emoji-picker .chat-controls #emoji-picker {
   background: #4169E1;
 }
 
-.chat-form .message-input:valid~.chat-controls #send-message {
+.chat-form .message-input:valid ~ .chat-controls #send-message {
   display: block;
-}
-
-.file-upload-wrapper {
-  position: relative;
-  height: 35px;
-  width: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.file-upload-wrapper button,
-.file-upload-wrapper img {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.file-upload-wrapper img {
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.file-upload-wrapper #file-cancel {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  height: 18px;
-  width: 18px;
-  background: #fff;
-  border-radius: 50%;
-  font-size: 12px;
-  color: red;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  display: none;
-}
-
-.file-upload-wrapper.file-uploaded #file-upload  {
-  display: none;
-}
-
-.file-upload-wrapper.file-uploaded img,
-.file-upload-wrapper.file-uploaded:hover #file-cancel {
-  display: block;
-}
-
-#file-input {
-  display: none;
 }
 
 em-emoji-picker {
@@ -915,7 +1025,11 @@ body.show-emoji-picker em-emoji-picker {
   margin: 0;
 }
 
-.products-list, .coupons-list, .news-list, .brands-list, .categories-list {
+.products-list,
+.coupons-list,
+.news-list,
+.brands-list,
+.categories-list {
   margin-top: 15px;
 }
 
@@ -926,12 +1040,20 @@ body.show-emoji-picker em-emoji-picker {
   margin-bottom: 10px;
 }
 
-.products-grid, .coupons-grid, .news-grid, .brands-grid, .categories-grid {
+.products-grid,
+.coupons-grid,
+.news-grid,
+.brands-grid,
+.categories-grid {
   display: grid;
   gap: 10px;
 }
 
-.product-card, .coupon-card, .news-card, .brand-card, .category-card {
+.product-card,
+.coupon-card,
+.news-card,
+.brand-card,
+.category-card {
   background: #fff;
   border-radius: 8px;
   width: 70%;
@@ -941,11 +1063,17 @@ body.show-emoji-picker em-emoji-picker {
   transition: transform 0.2s;
 }
 
-.product-card:hover, .coupon-card:hover, .news-card:hover, .brand-card:hover, .category-card:hover {
+.product-card:hover,
+.coupon-card:hover,
+.news-card:hover,
+.brand-card:hover,
+.category-card:hover {
   transform: translateY(-2px);
 }
 
-.product-image, .news-image, .brand-image {
+.product-image,
+.news-image,
+.brand-image {
   width: 100%;
   height: 120px;
   object-fit: cover;
@@ -964,22 +1092,28 @@ body.show-emoji-picker em-emoji-picker {
   font-size: 0.9rem;
 }
 
-.product-info, .news-info, .brand-name, .category-name {
+.product-info,
+.news-info,
+.brand-name,
+.category-name {
   margin-top: 10px;
 }
 
-.product-name, .news-title {
+.product-name,
+.news-title {
   font-size: 1rem;
   font-weight: 500;
   color: #333;
 }
 
-.product-price, .news-date {
+.product-price,
+.news-date {
   font-size: 0.9rem;
   color: #666;
 }
 
-.product-link, .news-link {
+.product-link,
+.news-link {
   display: inline-block;
   margin-top: 5px;
   color: #4a90e2;
@@ -987,7 +1121,8 @@ body.show-emoji-picker em-emoji-picker {
   font-size: 0.9rem;
 }
 
-.product-link:hover, .news-link:hover {
+.product-link:hover,
+.news-link:hover {
   text-decoration: underline;
 }
 
@@ -1051,7 +1186,8 @@ body.show-emoji-picker em-emoji-picker {
   background-color: #0056b3;
 }
 
-.emoji-button, .file-upload-button {
+.emoji-button,
+.file-upload-button {
   cursor: pointer;
   font-size: 18px;
   margin-right: 8px;
@@ -1162,11 +1298,17 @@ body.show-emoji-picker em-emoji-picker {
     font-size: 0.9rem;
   }
 
-  .product-card, .coupon-card, .news-card, .brand-card, .category-card {
+  .product-card,
+  .coupon-card,
+  .news-card,
+  .brand-card,
+  .category-card {
     width: 85%;
   }
 
-  .product-image, .news-image, .brand-image {
+  .product-image,
+  .news-image,
+  .brand-image {
     height: 100px;
   }
 
@@ -1272,14 +1414,14 @@ body.show-emoji-picker em-emoji-picker {
   }
 
   /* Chatbot Responsive for Mobile */
-  #chatbot-toggler {
+  .chatbot-container {
     right: 15px;
     bottom: 15px;
     width: 80px;
     height: 80px;
   }
 
-  #chatbot-toggler .chatbot-toggle-img {
+  .chatbot-toggle img {
     width: 70px;
     height: 70px;
   }
@@ -1329,22 +1471,22 @@ body.show-emoji-picker em-emoji-picker {
     font-size: 1rem;
   }
 
-  .file-upload-wrapper {
-    height: 30px;
-    width: 30px;
+  .chat-form .file-upload-label {
+    right: 60px; /* Điều chỉnh vị trí trên mobile */
+    font-size: 18px;
   }
 
-  .file-upload-wrapper #file-cancel {
-    height: 16px;
-    width: 16px;
-    font-size: 10px;
-  }
-
-  .product-card, .coupon-card, .news-card, .brand-card, .category-card {
+  .product-card,
+  .coupon-card,
+  .news-card,
+  .brand-card,
+  .category-card {
     width: 100%;
   }
 
-  .product-image, .news-image, .brand-image {
+  .product-image,
+  .news-image,
+  .brand-image {
     height: 80px;
   }
 
