@@ -3,14 +3,11 @@
 import React, { useEffect, useState } from "react";
 import styles from "./news.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
 import {
   faEye,
   faEyeSlash,
   faEdit,
-  faTrash,
   faTimes,
-  faChevronLeft,
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
@@ -30,7 +27,7 @@ interface NewsItem {
 }
 
 const API_BASE_URL = "https://api-zeal.onrender.com";
-const VIEW_THRESHOLD = 1; // Ngưỡng lượt xem để hiển thị popup xác nhận
+const VIEW_THRESHOLD = 1;
 
 const processContentImages = (content: string): string => {
   return content.replace(/src="([^"]+)"/g, (match, src) => {
@@ -56,12 +53,8 @@ const AdminNewsPage: React.FC = () => {
     newsId: string | null;
     currentStatus: "show" | "hidden" | null;
   }>({ show: false, newsId: null, currentStatus: null });
-  const [deleteConfirmPopup, setDeleteConfirmPopup] = useState<{
-    show: boolean;
-    newsId: string | null;
-  }>({ show: false, newsId: null });
 
-  const itemsPerPage = 9; // Đồng bộ với ordersPerPage trong order.module.css
+  const itemsPerPage = 10;
   const totalPages = Math.ceil(newsList.length / itemsPerPage);
 
   const fetchNews = async (): Promise<void> => {
@@ -93,12 +86,11 @@ const AdminNewsPage: React.FC = () => {
   const showNotification = (message: string, type: "success" | "error") => {
     if (type === "success") {
       toast.success(message, {
-         className: `${styles.customToast} ${styles.customToastBody}`
+        className: `${styles.customToast} ${styles.customToastBody}`
       });
     } else {
       toast.error(message, {
-                 className: `${styles.customToast} ${styles.customToastBody}`
-
+        className: `${styles.customToast} ${styles.customToastBody}`
       });
     }
   };
@@ -199,32 +191,6 @@ const AdminNewsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string): Promise<void> => {
-    const newsItem = newsList.find((item) => item._id === id);
-    if (newsItem && newsItem.views > VIEW_THRESHOLD) {
-      setDeleteConfirmPopup({ show: true, newsId: id });
-      return;
-    }
-    await confirmDelete(id);
-  };
-
-  const confirmDelete = async (id: string): Promise<void> => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}/api/news/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Xóa thất bại.");
-      setNewsList((prev) => prev.filter((item) => item._id !== id));
-      showNotification("Xóa bài viết thành công!", "success");
-    } catch (err) {
-      showNotification("Lỗi khi xóa bài viết.", "error");
-    } finally {
-      setDeleteConfirmPopup({ show: false, newsId: null });
-    }
-  };
-
   const closePopup = () => {
     setIsPopupOpen(false);
     setSelectedNews(null);
@@ -249,19 +215,18 @@ const AdminNewsPage: React.FC = () => {
   return (
     <div className={styles.orderManagementContainer}>
       <ToastContainer
-  position="top-right"
-  autoClose={3000}
-  hideProgressBar={false}
-  newestOnTop={false}
-  closeOnClick
-  rtl={false}
-  pauseOnFocusLoss
-  draggable
-  pauseOnHover
-  theme="light"
-  toastClassName={`${styles.customToast} ${styles.customToastBody}`}
-/>
-
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        toastClassName={`${styles.customToast} ${styles.customToastBody}`}
+      />
 
       <div className={styles.titleContainer}>
         <h1>QUẢN LÝ TIN TỨC</h1>
@@ -354,14 +319,6 @@ const AdminNewsPage: React.FC = () => {
                       >
                         <FontAwesomeIcon icon={news.status === "show" ? faEyeSlash : faEye} />
                       </button>
-                      <button
-                        className={styles.cancelBtn}
-                        onClick={() => handleDelete(news._id)}
-                        title="Xóa bài viết"
-                        aria-label={`Xóa bài viết ${news.title}`}
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -369,89 +326,89 @@ const AdminNewsPage: React.FC = () => {
             )}
           </tbody>
         </table>
-
-        {totalPages > 1 && (
-          <div className={styles.pagination}>
-            {(() => {
-              const visiblePages: number[] = [];
-              let showPrevEllipsis = false;
-              let showNextEllipsis = false;
-
-              if (totalPages <= 3) {
-                for (let i = 1; i <= totalPages; i++) {
-                  visiblePages.push(i);
-                }
-              } else {
-                if (currentPage === 1) {
-                  visiblePages.push(1, 2, 3);
-                  showNextEllipsis = totalPages > 3;
-                } else if (currentPage === totalPages) {
-                  visiblePages.push(totalPages - 2, totalPages - 1, totalPages);
-                  showPrevEllipsis = totalPages > 3;
-                } else {
-                  visiblePages.push(currentPage - 1, currentPage, currentPage + 1);
-                  showPrevEllipsis = currentPage > 2;
-                  showNextEllipsis = currentPage < totalPages - 1;
-                }
-              }
-
-              return (
-                <>
-                  {showPrevEllipsis && (
-                    <>
-                      <button
-                        className={`${styles.pageLink} ${styles.firstLastPage}`}
-                        onClick={() => goToPage(1)}
-                        disabled={loading}
-                        title="Trang đầu tiên"
-                      >
-                        1
-                      </button>
-                      <div
-                        className={styles.ellipsis}
-                        onClick={() => goToPage(Math.max(1, currentPage - 3))}
-                        title="Trang trước đó"
-                      >
-                        ...
-                      </div>
-                    </>
-                  )}
-                  {visiblePages.map((page) => (
-                    <button
-                      key={page}
-                      className={`${styles.pageLink} ${currentPage === page ? styles.pageLinkActive : ""}`}
-                      onClick={() => goToPage(page)}
-                      disabled={loading}
-                      title={`Trang ${page}`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  {showNextEllipsis && (
-                    <>
-                      <div
-                        className={styles.ellipsis}
-                        onClick={() => goToPage(Math.min(totalPages, currentPage + 3))}
-                        title="Trang tiếp theo"
-                      >
-                        ...
-                      </div>
-                      <button
-                        className={`${styles.pageLink} ${styles.firstLastPage}`}
-                        onClick={() => goToPage(totalPages)}
-                        disabled={loading}
-                        title="Trang cuối cùng"
-                      >
-                        {totalPages}
-                      </button>
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          {(() => {
+            const visiblePages: number[] = [];
+            let showPrevEllipsis = false;
+            let showNextEllipsis = false;
+
+            if (totalPages <= 3) {
+              for (let i = 1; i <= totalPages; i++) {
+                visiblePages.push(i);
+              }
+            } else {
+              if (currentPage === 1) {
+                visiblePages.push(1, 2, 3);
+                showNextEllipsis = totalPages > 3;
+              } else if (currentPage === totalPages) {
+                visiblePages.push(totalPages - 2, totalPages - 1, totalPages);
+                showPrevEllipsis = totalPages > 3;
+              } else {
+                visiblePages.push(currentPage - 1, currentPage, currentPage + 1);
+                showPrevEllipsis = currentPage > 2;
+                showNextEllipsis = currentPage < totalPages - 1;
+              }
+            }
+
+            return (
+              <>
+                {showPrevEllipsis && (
+                  <>
+                    <button
+                      className={`${styles.pageLink} ${styles.firstLastPage}`}
+                      onClick={() => goToPage(1)}
+                      disabled={loading}
+                      title="Trang đầu tiên"
+                    >
+                      1
+                    </button>
+                    <div
+                      className={styles.ellipsis}
+                      onClick={() => goToPage(Math.max(1, currentPage - 3))}
+                      title="Trang trước đó"
+                    >
+                      ...
+                    </div>
+                  </>
+                )}
+                {visiblePages.map((page) => (
+                  <button
+                    key={page}
+                    className={`${styles.pageLink} ${currentPage === page ? styles.pageLinkActive : ""}`}
+                    onClick={() => goToPage(page)}
+                    disabled={loading}
+                    title={`Trang ${page}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                {showNextEllipsis && (
+                  <>
+                    <div
+                      className={styles.ellipsis}
+                      onClick={() => goToPage(Math.min(totalPages, currentPage + 3))}
+                      title="Trang tiếp theo"
+                    >
+                      ...
+                    </div>
+                    <button
+                      className={`${styles.pageLink} ${styles.firstLastPage}`}
+                      onClick={() => goToPage(totalPages)}
+                      disabled={loading}
+                      title="Trang cuối cùng"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {isPopupOpen && selectedNews && (
         <div className={styles.modalOverlay} onClick={handleOverlayClick}>
@@ -464,17 +421,6 @@ const AdminNewsPage: React.FC = () => {
               <p><strong>Trạng thái:</strong> {selectedNews.status === "show" ? "Hiển thị" : "Ẩn"}</p>
               <p><strong>Lượt xem:</strong> {selectedNews.views}</p>
               <p><strong>Ngày đăng:</strong> {new Date(selectedNews.publishedAt).toLocaleDateString("vi-VN")}</p>
-              {selectedNews.thumbnailUrl && (
-                <div className={styles.popupThumbnail}>
-                  <img
-                    src={selectedNews.thumbnailUrl}
-                    alt={selectedNews.thumbnailCaption || selectedNews.title}
-                    onError={() => setImageError("Không thể tải hình ảnh thumbnail.")}
-                    className={styles.orderTableImage}
-                  />
-                  {selectedNews.thumbnailCaption && <p>{selectedNews.thumbnailCaption}</p>}
-                </div>
-              )}
               <div
                 className={styles.popupContentBody}
                 dangerouslySetInnerHTML={{
@@ -521,43 +467,6 @@ const AdminNewsPage: React.FC = () => {
                   aria-label="Xác nhận ẩn bài viết"
                 >
                   <FontAwesomeIcon icon={faEyeSlash} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deleteConfirmPopup.show && (
-        <div className={styles.modalOverlay} onClick={() => setDeleteConfirmPopup({ show: false, newsId: null })}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <button
-              className={styles.closePopupBtn}
-              onClick={() => setDeleteConfirmPopup({ show: false, newsId: null })}
-              title="Đóng"
-              aria-label="Đóng xác nhận xóa bài viết"
-            >
-              <FontAwesomeIcon icon={faTimes} />
-            </button>
-            <h2 className={styles.modalContentTitle}>Xác nhận xóa bài viết</h2>
-            <div className={styles.popupDetails}>
-              <p>Bài viết này có hơn {VIEW_THRESHOLD} lượt xem. Bạn có chắc chắn muốn xóa bài viết?</p>
-              <div className={styles.modalActions}>
-                <button
-                  className={styles.cancelBtn}
-                  onClick={() => setDeleteConfirmPopup({ show: false, newsId: null })}
-                  title="Hủy"
-                  aria-label="Hủy xóa bài viết"
-                >
-                  <FontAwesomeIcon icon={faTimes} />
-                </button>
-                <button
-                  className={styles.confirmBtn}
-                  onClick={() => deleteConfirmPopup.newsId && confirmDelete(deleteConfirmPopup.newsId)}
-                  title="Xác nhận"
-                  aria-label="Xác nhận xóa bài viết"
-                >
-                  <FontAwesomeIcon icon={faTrash} />
                 </button>
               </div>
             </div>

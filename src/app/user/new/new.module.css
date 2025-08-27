@@ -56,7 +56,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 20px;
-  margin-bottom: 30px;
+  margin: 30px;
 }
 
 .hotNewPage :global(a) {
@@ -172,7 +172,7 @@
   border-radius: 5px;
   text-decoration: none;
   transition: background-color 0.3s ease;
-  width: 120px;
+  width: 150px;
 }
 
 .btn:hover {

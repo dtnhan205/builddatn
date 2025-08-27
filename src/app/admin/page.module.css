@@ -125,6 +125,9 @@
 .statBox:nth-child(4) {
   border-left-color: #8b5cf6;
 }
+.statBox:nth-child(5) {
+  border-left-color: #5cf673;
+}
 
 .statBox:hover {
   transform: translateY(-3px);
@@ -472,6 +475,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   position: relative;
 }
+
 .modalhuy {
   background: white;
   border-radius: 12px;
@@ -717,4 +721,60 @@
   display: flex;
   gap: 0.75rem;
   margin-top: 0.75rem;
+}
+
+.zoomedImageOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.zoomedImageContainer {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.zoomedImage {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.closeZoomButton {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  color: #1e293b;
+  font-size: 18px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s, border-color 0.2s;
+}
+
+.closeZoomButton:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }

@@ -96,7 +96,7 @@
 }
 
 .tableContainer {
-  max-width: 1400px;
+  max-width: 1920px;
   margin: 24px;
   background: #ffffff;
   border-radius: 12px;
@@ -256,6 +256,7 @@
 
 .optionsTable th,
 .optionsTable td {
+  text-align: center;
   padding: 12px;
   font-size: 13px;
 }
@@ -294,7 +295,7 @@
 }
 
 .actionButtons button {
-  margin-bottom: 15.5px;
+  margin-bottom: 16px;
   width: 36px;
   height: 36px;
   border-radius: 6px;
@@ -405,13 +406,29 @@
   padding: 24px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-width: 1100px;
+  max-width:1100px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
   position: relative;
 }
-
+.modalConfirm{
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width:400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+.modalConfirm h2 {
+  color: #000000;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
 .modalContent h2 {
   color: #000000;
   font-size: 20px;
@@ -420,6 +437,11 @@
 }
 
 .modalContent p {
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+.modalConfirm p {
   color: #64748b;
   font-size: 14px;
   margin-bottom: 20px;

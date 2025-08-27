@@ -228,6 +228,8 @@ export default function Home() {
     }
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "đ";
   };
+  
+  const imagevippro = "https://res.cloudinary.com/dgud3sqyn/image/upload/v1755780102/imagevippro_hhxvix.png";
 
   // Xử lý URL ảnh
   const getImageUrl = (image: string): string => {
@@ -245,19 +247,20 @@ export default function Home() {
       {dataReady && (
         <>
           <ScrollInView>
-            <div className={styles.banner}>
-              <img
-                src={banners.banner1[0] ? `${getImageUrl(banners.banner1[0])}?${cacheBuster}` : ""}
-                alt="Main Banner"
-                loading="eager" // Ưu tiên tải banner chính
-                onLoad={() => handleImageLoad(banners.banner1[0] || "")}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
-                  console.log("Main Banner image load failed, switched to 404 fallback");
-                }}
-              />
-            </div>
-          </ScrollInView>
+  <div className={styles.banner}>
+    <img
+      src={banners.banner1[0] ? `${getImageUrl(banners.banner1[0])}?${cacheBuster}` : ""}
+      alt="Main Banner"
+      loading="eager"
+      className={styles.bannerImage}
+      onLoad={() => handleImageLoad(banners.banner1[0] || "")}
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+        console.log("Main Banner image load failed, switched to 404 fallback");
+      }}
+    />
+  </div>
+</ScrollInView>
 
           <ScrollInView>
             <section className={styles.newProductsSection}>

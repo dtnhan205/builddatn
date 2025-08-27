@@ -676,15 +676,16 @@ export default function CheckoutPage() {
                   required
                 />
                 <input
-                  type="text"
-                  name="sdt"
-                  placeholder="Số điện thoại (ví dụ: 0342031354) *"
-                  value={formData.sdt}
-                  readOnly
-                  className={styles.readOnlyInput}
-                  pattern="[0-9]{10}"
-                  title="Số điện thoại phải có 10 chữ số"
-                />
+                type="text"
+                name="sdt"
+                placeholder="Số điện thoại (ví dụ: 0342031354) *"
+                value={formData.sdt}
+                onChange={handleChange} 
+                className={styles.input}
+                pattern="[0-9]{10}"
+                title="Số điện thoại phải có 10 chữ số"
+              />
+
                 <textarea
                   name="note"
                   placeholder="Ghi chú cho đơn hàng của bạn (ví dụ: Giao nhanh lên nhé)"

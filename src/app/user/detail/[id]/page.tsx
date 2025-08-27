@@ -96,9 +96,9 @@ const useUserInfo = () => {
 
 // Hook tùy chỉnh: Quản lý thông báo toast
 const useToast = () => {
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
 
-  const showToast = useCallback((type: "success" | "error", text: string) => {
+  const showToast = useCallback((type: "success" | "error" | "warning", text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), TOAST_DURATION);
   }, []);
@@ -465,31 +465,12 @@ const getProductPrice = (product: Product): number => {
       return;
     }
 
-    if (!userId) {
-      try {
-        const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
-        const existingItemIndex = cartItems.findIndex(
-          (item: any) => item.id === product._id && item.optionId === selectedOption._id
-        );
-
-        if (existingItemIndex !== -1) {
-          cartItems[existingItemIndex].quantity += quantity;
-        } else {
-          cartItems.push({
-            id: product._id,
-            name: product.name,
-            optionId: selectedOption._id,
-            price: selectedOption.discount_price || selectedOption.price,
-            image: product.images?.[0] || "",
-            quantity,
-          });
-        }
-
-        localStorage.setItem("cart", JSON.stringify(cartItems));
-        showCartToast("success", "Đã thêm vào giỏ hàng!");
-      } catch (error) {
-        showCartToast("error", "Lỗi khi thêm vào giỏ hàng local");
-      }
+    const token = localStorage.getItem("token");
+    if (!userId || !token) {
+      showCartToast("warning", "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
+      setTimeout(() => {
+        window.location.href = "/user/login";
+      }, 2000);
       return;
     }
 
@@ -913,6 +894,28 @@ const getProductPrice = (product: Product): number => {
                 />
               ))}
             </div>
+          </div>
+          <div className={styles['product-thumbnails-mobile']}>
+            {product.images?.map((image, index) => (
+              <div
+                key={`thumbnail-${index}`}
+                className={`${styles.thumbnail} ${index === currentImageIndex ? styles.active : ""}`}
+                onClick={() => setCurrentImageIndex(index)}
+              >
+                <Image
+                  src={`${getImageUrl(image)}?${cacheBuster}`}
+                  alt={`${product.name} thumbnail ${index + 1}`}
+                  width={100}
+                  height={100}
+                  quality={100}
+                  className={styles.thumbnailImg}
+                  onError={(e) => {
+                    console.log(`Thumbnail ${index + 1} for ${product.name} load failed, switched to 404 fallback`);
+                    (e.target as HTMLImageElement).src = ERROR_IMAGE_URL;
+                  }}
+                />
+              </div>
+            ))}
           </div>
 
           <div className={styles['product-info']}>

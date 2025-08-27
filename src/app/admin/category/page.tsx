@@ -46,7 +46,7 @@ export default function Category() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [updateError, setUpdateError] = useState(""); // New state for update errors
+  const [updateError, setUpdateError] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [showConfirmPopup, setShowConfirmPopup] = useState<
     { id: string; name: string; action: "ẩn" | "hiển thị" } | null
@@ -84,7 +84,6 @@ export default function Category() {
     ) => {
       setLoading(true);
       try {
-        // Fetch categories
         const categoryRes = await fetch(
           "https://api-zeal.onrender.com/api/categories",
           {
@@ -106,7 +105,6 @@ export default function Category() {
         }
         const categoriesData: Category[] = await categoryRes.json();
 
-        // Filter out invalid categories and log issues
         const validCategories = categoriesData.filter((cat) => {
           if (!cat.name || typeof cat.name !== "string") {
             console.warn(`Invalid category detected: _id=${cat._id}, name=${cat.name}`);
@@ -115,7 +113,6 @@ export default function Category() {
           return true;
         });
 
-        // Fetch all products
         const productRes = await fetch(
           "https://api-zeal.onrender.com/api/products",
           {
@@ -131,7 +128,6 @@ export default function Category() {
         }
         const products: Product[] = await productRes.json();
 
-        // Đếm số sản phẩm cho từng danh mục
         const updatedCategories = validCategories.map((category) => {
           const productCount = products.filter((product) => {
             let prodCatId = "";
@@ -255,7 +251,6 @@ export default function Category() {
           }
           return;
         }
-        // Update the categories state directly
         setCategories((prev) =>
           prev.map((cat) =>
             cat._id === id ? { ...cat, status: result.category.status } : cat
@@ -281,7 +276,7 @@ export default function Category() {
       const category = categories.find((cat) => cat._id === id);
       if (category) {
         setEditingCategory(category);
-        setUpdateError(""); // Reset update error when starting edit
+        setUpdateError("");
       }
     },
     [categories]
@@ -380,7 +375,6 @@ export default function Category() {
         setNewCategoryName("");
         setShowAddPopup(false);
         showNotification("Thêm danh mục thành công!", "success");
-        // Reload danh mục để cập nhật productCount chính xác
         fetchCategoriesAndProducts(setCategories, setLoading, router, showNotification, token);
       } catch (error: any) {
         setAddError(error.message || "Đã xảy ra lỗi khi thêm danh mục.");
@@ -391,6 +385,16 @@ export default function Category() {
     },
     [token, router, newCategoryName, fetchCategoriesAndProducts]
   );
+
+  const handleClosePopup = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      setShowConfirmPopup(null);
+      setShowStockWarning(null);
+      setShowAddPopup(false);
+      setNewCategoryName("");
+      setAddError("");
+    }
+  }, []);
 
   const filteredCategories = categories
     .filter((cat) => (statusFilter === "all" ? true : cat.status === statusFilter))
@@ -520,22 +524,27 @@ export default function Category() {
             ) : (
               currentCategories.map((category) => (
                 <tr key={category._id} className={styles.productRow}>
-                  <td>
+                  <td className={styles.editableCell}>
                     {editingCategory?._id === category._id ? (
-                      <div className={styles.formGroup}>
-                        <input
-                          type="text"
-                          value={editingCategory.name}
-                          onChange={(e) =>
-                            setEditingCategory({ ...editingCategory, name: e.target.value })
-                          }
-                          className={styles.searchInput}
-                          aria-label="Chỉnh sửa tên danh mục"
-                        />
-                        {updateError && <div className={styles.errorMessage}>{updateError}</div>}
+                      <div className={styles.editingContainer}>
+                        <div className={styles.formGroup}>
+                          <input
+                            type="text"
+                            value={editingCategory.name}
+                            onChange={(e) =>
+                              setEditingCategory({ ...editingCategory, name: e.target.value })
+                            }
+                            className={styles.editInput}
+                            aria-label="Chỉnh sửa tên danh mục"
+                            autoFocus
+                          />
+                          {updateError && <div className={styles.errorMessage}>{updateError}</div>}
+                        </div>
                       </div>
                     ) : (
-                      category.name || "Không có tên"
+                      <div className={styles.categoryName}>
+                        {category.name || "Không có tên"}
+                      </div>
                     )}
                   </td>
                   <td>{category.productCount ?? 0}</td>
@@ -653,7 +662,7 @@ export default function Category() {
         </div>
       )}
       {showConfirmPopup && (
-        <div className={styles.modalOverlay}>
+        <div className={styles.modalOverlay} onClick={handleClosePopup}>
           <div className={styles.modalContent}>
             <h2>Xác nhận</h2>
             <p>
@@ -680,7 +689,7 @@ export default function Category() {
         </div>
       )}
       {showStockWarning && (
-        <div className={styles.modalOverlay}>
+        <div className={styles.modalOverlay} onClick={handleClosePopup}>
           <div className={styles.modalContent}>
             <h2>Cảnh báo</h2>
             <p>
@@ -700,7 +709,7 @@ export default function Category() {
         </div>
       )}
       {showAddPopup && (
-        <div className={styles.modalOverlay}>
+        <div className={styles.modalOverlay} onClick={handleClosePopup}>
           <div className={styles.modalContent}>
             <h2>Thêm danh mục mới</h2>
             <form

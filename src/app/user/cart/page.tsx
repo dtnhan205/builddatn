@@ -14,6 +14,20 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api-zeal.o
 const ERROR_IMAGE_URL = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
 const TIMEOUT_DURATION = 10000;
 
+// Interface for Coupon
+interface Coupon {
+  _id: string;
+  code: string;
+  isActive?: boolean; // Optional, default to true if missing
+  expiryDate: string | null;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  minOrderValue: number;
+  usageLimit: number | null;
+  usedCount: number;
+  description: string;
+}
+
 // Utility function: Get image URL
 const getImageUrl = (image: string): string => {
   if (!image || typeof image !== "string" || image.trim() === "") {
@@ -31,14 +45,14 @@ const getImageUrl = (image: string): string => {
   }
 };
 
-// API request function with timeout handling
+// API request function with timeout handling and token
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const defaultHeaders = {
     "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(token && { Authorization: `Bearer ${token}` }), // Add token if exists
   };
 
   const config: RequestInit = {
@@ -82,12 +96,14 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [discount, setDiscount] = useState(0);
   const [total, setTotal] = useState(0);
   const [cartMessage, setCartMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const router = useRouter();
   const { setCheckoutData } = useCart();
   const [cacheBuster, setCacheBuster] = useState("");
+  const [showCouponPopup, setShowCouponPopup] = useState(false);
 
   // Generate cacheBuster after hydration
   useEffect(() => {
@@ -131,6 +147,36 @@ export default function CartPage() {
       setTimeout(() => router.push("/user/login"), 3000);
     }
   }, [router]);
+
+  // Fetch coupons - Requires token authentication
+  const fetchCoupons = async () => {
+    try {
+      const couponData = await apiRequest("/api/coupons"); // Token is now included in header
+      console.log("Raw coupon data from API:", couponData); // Debug raw data
+
+      // Handle if API returns { coupons: [...] } or direct array
+      const couponsArray = Array.isArray(couponData) ? couponData : (couponData.coupons || []);
+      
+      if (couponsArray.length > 0) {
+        setCoupons(couponsArray); // Set all coupons, not just valid ones
+      } else {
+        setCoupons([]);
+        console.warn("No coupons found in API response:", couponData);
+      }
+    } catch (err) {
+      console.error("Error fetching coupons:", err); // Debug error
+      setCartMessage({ type: "error", text: "Lỗi khi tải danh sách mã giảm giá (có thể do token không hợp lệ)" });
+      setTimeout(() => setCartMessage(null), 3000);
+    }
+  };
+
+  // Fetch cart and coupons
+  useEffect(() => {
+    if (userId) {
+      fetchCart();
+      fetchCoupons();
+    }
+  }, [userId]);
 
   // Fetch cart data
   const fetchCart = async () => {
@@ -182,12 +228,6 @@ export default function CartPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (userId) {
-      fetchCart();
-    }
-  }, [userId]);
 
   // Get product price from option
   const getProductPrice = (option: CartItem["option"] | null | undefined): number => {
@@ -360,8 +400,9 @@ export default function CartPage() {
 
   // Apply coupon code
   const updatePrice = async () => {
+    console.log("Coupon code before API call:", couponCode); // Debug
     if (!userId || !couponCode.trim()) {
-      setCartMessage({ type: "error", text: "Vui lòng nhập mã giảm giá" });
+      setCartMessage({ type: "error", text: "Vui lòng chọn mã giảm giá" });
       setTimeout(() => setCartMessage(null), 3000);
       return;
     }
@@ -381,7 +422,7 @@ export default function CartPage() {
         // Merge new cart data with original to preserve option
         if (data.cart && data.cart.items) {
           const updatedItems = data.cart.items.map((newItem: CartItem) => {
-           const originalItem = originalCart?.items?.find(
+            const originalItem = originalCart?.items?.find(
               (i) =>
                 i.product._id === newItem.product._id &&
                 i.optionId === newItem.optionId
@@ -418,7 +459,11 @@ export default function CartPage() {
   };
 
   const handleApplyCoupon = () => {
-    updatePrice();
+    if (!couponCode.trim()) {
+      setShowCouponPopup(true); // Mở popup nếu chưa có mã
+      return;
+    }
+    updatePrice(); // Gọi API để áp mã
   };
 
   // Handle checkout
@@ -560,16 +605,21 @@ export default function CartPage() {
         </div>
         <div className={styles["cart-right"]}>
           <div className={styles.discount}>
-            <input
-              type="text"
-              placeholder="Nhập mã giảm giá"
-              className={styles["discount-input"]}
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-            />
-            <button className={`${styles["discount-btn"]} ${styles.apply}`} onClick={handleApplyCoupon}>
-              Sử dụng
+            <button className={`${styles["discount-btn"]} ${styles.select}`} onClick={() => setShowCouponPopup(true)}>
+              Chọn mã giảm giá
             </button>
+            <div className={styles["discount-row"]}>
+              <input
+                type="text"
+                className={styles["discount-input"]}
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="Nhập mã giảm giá"
+              />
+              <button className={`${styles["discount-btn"]} ${styles.apply}`} onClick={handleApplyCoupon}>
+                Sử dụng
+              </button>
+            </div>
           </div>
           <div className={styles.summary}>
             <p className={styles["summary-item"]}>
@@ -595,6 +645,75 @@ export default function CartPage() {
       </div>
       {cartMessage && (
         <ToastNotification message={cartMessage.text} type={cartMessage.type} onClose={() => setCartMessage(null)} />
+      )}
+      {showCouponPopup && (
+        <div className={styles["popup-overlay"]} onClick={() => setShowCouponPopup(false)}>
+          <div className={styles["popup-content"]} onClick={(e) => e.stopPropagation()}>
+            <h3>Chọn mã giảm giá</h3>
+            <div className={styles["coupon-list"]}>
+              {coupons
+                .filter((coupon) => coupon.usageLimit === null || coupon.usedCount < coupon.usageLimit) // Hide coupons that have reached usage limit
+                .map((coupon) => {
+                  const isActive = coupon.isActive !== false;
+                  const expiryDate = coupon.expiryDate ? new Date(coupon.expiryDate) : null;
+                  const isNotExpired = !expiryDate || expiryDate > new Date();
+                  const subtotal = calculateSubtotal();
+                  const meetsMinOrderValue = subtotal >= coupon.minOrderValue;
+                  const isUsable = isActive && isNotExpired && meetsMinOrderValue;
+
+                  const discountDisplay = coupon.discountType === "percentage"
+                    ? `${coupon.discountValue}%`
+                    : formatPrice(coupon.discountValue);
+
+                  // Format expiry date to show only day/month/year
+                  const formatExpiryDate = (date) => {
+                    if (!date) return "Không giới hạn";
+                    const expiry = new Date(date);
+                    return expiry.toLocaleDateString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    });
+                  };
+
+                  return (
+                    <div
+                      key={coupon._id}
+                      className={`${styles["coupon-item"]} ${!isUsable ? styles["disabled"] : ""}`}
+                      onClick={() => {
+                        if (isUsable) {
+                          setCouponCode(coupon.code);
+                          setShowCouponPopup(false);
+                        }
+                      }}
+                    >
+                      {/* Left block - 20% - Discount display */}
+                      <div className={styles["coupon-discount"]}>
+                        <span className={styles["discount-value"]}>{discountDisplay}</span>
+                      </div>
+                      {/* Right block - 80% - Details */}
+                      <div className={styles["coupon-info"]}>
+                        <div className={styles["coupon-description"]}>
+                          {coupon.description || "Không có mô tả"}
+                          {!meetsMinOrderValue && (
+                            <span className={styles["min-order-warning"]}>
+                              (Yêu cầu tối thiểu {formatPrice(coupon.minOrderValue)})
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles["coupon-expiry"]}>
+                          HSD: {formatExpiryDate(coupon.expiryDate)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+            <button className={styles["popup-close"]} onClick={() => setShowCouponPopup(false)}>
+              Đóng
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

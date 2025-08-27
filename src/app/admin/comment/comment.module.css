@@ -5,6 +5,7 @@
   font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin-left: 250px;
   transition: margin-left 0.3s;
+  z-index: 1; /* Low z-index to ensure it stays below .imageModal */
 }
 
 .titleContainer {
@@ -49,7 +50,7 @@
 }
 
 .tableContainer {
-  max-width: 1400px;
+  max-width: 1920px;
   margin: 20px;
   background: #ffffff;
   border-radius: 12px;
@@ -113,6 +114,7 @@
 .commentDetails {
   padding: 20px;
   background: #ffffff;
+  z-index: 10; /* Low z-index to ensure it stays below .imageModal */
 }
 
 .commentDetails h3 {
@@ -124,6 +126,7 @@
 .detailsContainer {
   display: grid;
   gap: 20px;
+  z-index: 10; /* Low z-index to ensure it stays below .imageModal */
 }
 
 .detailsSection {
@@ -177,7 +180,9 @@
 }
 
 .editButton {
-  margin-top: 10px;
+  margin: 0 auto;
+  grid-column: 2;
+  width:150px;
   padding: 8px 16px;
   background: #43a047;
   color: white;
@@ -259,15 +264,16 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8); /* Darker backdrop for better contrast */
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(3px);
+  z-index: 2000; /* Higher z-index to ensure it appears above everything */
+  backdrop-filter: blur(6px); /* Stronger blur for emphasis */
 }
 
 .modalContent {
+  z-index: 2010; /* Slightly higher than .imageModal for content */
   position: relative;
   background: #ffffff;
   padding: 24px;
@@ -354,7 +360,7 @@
   background: #2196F3;
   color: white;
   border-radius: 8px;
-  z-index: 1001;
+  z-index: 3000; /* High z-index for visibility */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -401,6 +407,83 @@
   margin-bottom: 8px;
 }
 
+.zoomedImageOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+
+.zoomedImageOverlay.show {
+  opacity: 1;
+}
+
+.zoomedImageContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 90%;
+  max-height: 80vh;
+}
+
+.zoomedImage {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: zoomIn 0.3s ease-out forwards;
+}
+
+.closeZoomButton {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.closeZoomButton:hover {
+  transform: scale(1.1);
+  border-color: #4CAF50;
+  background: #f0fdf4;
+}
+
+.closeZoomButton:focus-visible {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @media (max-width: 768px) {
   .commentManagementContainer {
     margin-left: 0;
@@ -427,5 +510,20 @@
   .commentVideo {
     width: 100%;
     height: auto;
+  }
+
+  .zoomedImageContainer {
+    max-height: 70vh;
+  }
+
+  .zoomedImage {
+    max-height: 70vh;
+  }
+
+  .closeZoomButton {
+    width: 24px;
+    height: 24px;
+    top: -12px;
+    right: -12px;
   }
 }

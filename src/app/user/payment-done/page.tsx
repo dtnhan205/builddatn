@@ -161,8 +161,8 @@ const SuccessPage: React.FC = () => {
             <div className="checkmark"></div>
           </div>
         </div>
-        <h1>Thanh Toán Thành Công!</h1>
-        <p className="message">Cảm ơn bạn đã mua hàng. Đơn hàng của bạn đã được xử lý thành công.</p>
+        <h1>Đặt Hàng Thành Công!</h1>
+        <p className="message">Cảm ơn bạn đã mua hàng. Đơn hàng của bạn sẽ được xử lý trong 3-4 ngày.</p> 
         <div className="order-details">
           <div className="detail"><span className="label">Mã đơn hàng:</span><span className="value">{orderId}</span></div>
           <div className="detail"><span className="label">Ngày:</span><span className="value">{date}</span></div>

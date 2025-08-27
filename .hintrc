@@ -14,7 +14,10 @@
       {
         "ignore": [
           "backdrop-filter",
-          "user-select"
+          "user-select",
+          "-webkit-mask-repeat",
+          "-webkit-mask",
+          "-webkit-mask-size"
         ]
       }
     ],

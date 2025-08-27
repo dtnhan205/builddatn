@@ -63,6 +63,8 @@ export default function ProductPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  // New state for selected brand
+  const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const productsPerPage = 9;
 
@@ -297,16 +299,18 @@ export default function ProductPage() {
     fetchData();
   }, []);
 
+  // Updated filtering logic to include brand
   useEffect(() => {
     const filtered = products.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "all" || product.id_category === selectedCategory;
       const matchesStatus = selectedStatus === "all" || product.status === selectedStatus;
-      return matchesSearch && matchesCategory && matchesStatus;
+      const matchesBrand = selectedBrand === "all" || product.id_brand === selectedBrand;
+      return matchesSearch && matchesCategory && matchesStatus && matchesBrand;
     });
     setFilteredProducts(filtered);
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, selectedStatus, products]);
+  }, [searchQuery, selectedCategory, selectedStatus, selectedBrand, products]);
 
   const confirmToggleStatus = (slug: string) => {
     const product = products.find((p) => p.slug === slug);
@@ -494,6 +498,18 @@ export default function ProductPage() {
               </option>
             ))}
           </select>
+           <select
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+            className={styles.categorySelect}
+          >
+            <option value="all">Tất cả thương hiệu</option>
+            {brands.map((brand) => (
+              <option key={brand._id} value={brand._id}>
+                {brand.name}
+              </option>
+            ))}
+          </select>
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -503,6 +519,8 @@ export default function ProductPage() {
             <option value="show">Hiển thị</option>
             <option value="hidden">Ẩn</option>
           </select>
+          {/* New brand filter dropdown */}
+         
           <Link href="/admin/add_product" className={styles.addProductBtn} title="Thêm sản phẩm">
             <FontAwesomeIcon icon={faPlus} />
           </Link>
@@ -612,7 +630,7 @@ export default function ProductPage() {
                   <h4>Mô tả sản phẩm</h4>
                   <p><strong>Mô tả ngắn:</strong> {selectedProduct.short_description}</p>
                   <br />
-                  <p><strong>Mô tả chi tiết:</strong></p>
+                  <h4><strong>Mô tả chi tiết:</strong></h4>
                   <div className={styles.descriptionContent} dangerouslySetInnerHTML={{ __html: selectedProduct.description }} />
                 </div>
                 <div className={styles.detailsSection}>
@@ -736,7 +754,7 @@ export default function ProductPage() {
       )}
       {isTogglingStatus && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+          <div className={styles.modalConfirm}>
             <h2>Xác nhận thay đổi trạng thái</h2>
             <p>{toggleMessage}</p>
             <div className={styles.modalActions}>

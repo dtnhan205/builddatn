@@ -111,29 +111,88 @@
 .backBtn:hover {
   background-color: #834818;
 }
-
-
-@media (max-width: 768px) {
+/* Tablet Responsive */
+@media (max-width: 1024px) {
+  .container {
+    padding: 12px;
+    min-height: 400px;
+  }
+  .header {
+    margin-top: 40px;
+    font-size: 1.2rem;
+  }
   .qrContainer {
     flex-direction: column;
-    max-width: 100%;
-    padding: 15px;
+    max-width: 98vw;
+    padding: 12px;
+    gap: 18px;
   }
-
   .qrInfo {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
+    font-size: 1rem;
   }
-
-  .qrCode {
-    margin-top: 20px;
-  }
-
   .qrCode img {
-    width: 200px; 
-    height: 200px;
+    width: 180px;
+    height: 180px;
   }
-
   .note {
-    width: 90%;
+    font-size: 0.95em;
+    padding: 7px;
+  }
+  .backBtn {
+    padding: 8px 16px;
+    font-size: 1rem;
+    margin-top: 14px;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  .container {
+    padding: 4px;
+    min-height: 200px;
+    font-size: 0.95rem;
+  }
+  .header {
+    margin-top: 18px;
+    font-size: 1rem;
+  }
+  .qrContainer {
+    flex-direction: column;
+    max-width: 100vw;
+    padding: 4px;
+    gap: 10px;
+    border-radius: 8px;
+  }
+  .qrInfo {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+  .qrInfo p span {
+    width: 90px;
+    font-size: 0.9rem;
+    margin-right: 6px;
+  }
+  .qrInfo p::before {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+  }
+  .qrCode img {
+    width: 120px;
+    height: 120px;
+    border-radius: 3px;
+  }
+  .note {
+    font-size: 0.85em;
+    padding: 4px;
+    margin-top: 6px;
+    border-radius: 3px;
+  }
+  .backBtn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    border-radius: 3px;
   }
 }

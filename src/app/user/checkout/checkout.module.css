@@ -1,12 +1,8 @@
-
-
-
 .container {
   max-width: 1290px;
   margin: 0 auto;
   padding: 20px;
 }
-
 
 .steps {
   display: flex;
@@ -483,4 +479,248 @@
 
 .popupContent button[type="button"]:last-child:hover {
   background-color: #bbb;
+}
+/* Tablet Responsive */
+@media (max-width: 1024px) {
+  .container {
+    max-width: 100%;
+    width: 100%;
+    padding: 12px;
+  }
+  .steps {
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  .stepNumber {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    margin-right: 6px;
+  }
+  .stepText {
+    font-size: 18px;
+  }
+  .stepArrow {
+    font-size: 28px;
+    margin: 0 8px;
+  }
+  .content {
+    flex-direction: column;
+    gap: 18px;
+  }
+  .formSection,
+  .cartSection {
+    max-width: 100%;
+    padding: 12px;
+  }
+  .cartTitle {
+    font-size: 18px;
+    padding-bottom: 8px;
+  }
+  .cartItemImage {
+    width: 48px;
+    height: 48px;
+    margin-right: 10px;
+  }
+  .cartItemName {
+    font-size: 15px;
+  }
+  .cartItemDesc {
+    font-size: 13px;
+  }
+  .cartItemPrice {
+    width: 80px;
+    font-size: 15px;
+  }
+  .summaryRow {
+    font-size: 13px;
+  }
+  .summaryRow.total {
+    font-size: 15px;
+  }
+  .formTitle,
+  .paymentTitle {
+    font-size: 20px;
+  }
+  .paymentMethod {
+    font-size: 15px;
+  }
+  .paymentDescription {
+    font-size: 11px;
+    margin-left: 18px;
+  }
+  .submitBtn {
+    font-size: 15px;
+    padding: 10px;
+  }
+  .disclaimer {
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .popupContent {
+    min-width: 220px;
+    padding: 12px;
+    width: 90vw;
+  }
+  .addressItem {
+    font-size: 14px;
+    padding: 8px;
+  }
+  .addressItem button,
+  .popupContent button[type="button"] {
+    font-size: 13px;
+    padding: 7px 14px;
+  }
+  .popupContent input,
+  .popupContent select {
+    font-size: 14px;
+    padding: 7px;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  .container {
+    max-width: 100vw;
+    width: 100vw;
+    padding: 4px;
+  }
+  .steps {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .stepNumber {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+    margin-right: 3px;
+  }
+  .stepText {
+    font-size: 12px;
+  }
+  .stepArrow {
+    font-size: 16px;
+    margin: 0 3px;
+  }
+  .content {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .formSection,
+  .cartSection {
+    max-width: 100vw;
+    padding: 6px;
+  }
+  .formTitle,
+  .paymentTitle {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .mainForm {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .formSection input[type="text"],
+  .formSection select,
+  .formSection textarea {
+    font-size: 12px;
+    padding: 6px;
+    margin-bottom: 8px;
+  }
+  .formSection textarea {
+    height: 60px;
+  }
+  .cartTitle {
+    font-size: 13px;
+    padding-bottom: 4px;
+  }
+  .cartItem {
+    padding: 6px 0;
+  }
+  .cartItemImage {
+    width: 28px;
+    height: 28px;
+    margin-right: 5px;
+  }
+  .cartItemName {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+  .cartItemDesc {
+    font-size: 11px;
+  }
+  .cartItemPrice {
+    width: 48px;
+    font-size: 12px;
+  }
+  .cartSummary {
+    font-size: 11px;
+    margin-top: 8px;
+    padding-bottom: 4px;
+  }
+  .summaryRow {
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+  .summaryRow.total {
+    font-size: 12px;
+  }
+  .summaryNote {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  .paymentMethodWrapper {
+    padding: 8px;
+    margin-top: 8px;
+  }
+  .paymentMethod {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .paymentDescription {
+    font-size: 10px;
+    margin-left: 8px;
+    margin-bottom: 8px;
+  }
+  .submitBtn {
+    font-size: 12px;
+    padding: 7px;
+    margin-top: 8px;
+  }
+  .disclaimer {
+    font-size: 10px;
+    margin-top: 6px;
+  }
+  .popupContent {
+    min-width: 120px;
+    padding: 6px;
+    width: 98vw;
+    font-size: 12px;
+  }
+  .popupContent h3 {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .addressItem {
+    font-size: 11px;
+    padding: 5px;
+  }
+  .addressItem button,
+  .popupContent button[type="button"] {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  .popupContent input,
+  .popupContent select {
+    font-size: 11px;
+    padding: 5px;
+    margin-bottom: 6px;
+  }
+  .sloseButton {
+    margin-top: 10px;
+    font-size: 11px;
+    padding: 5px 8px;
+  }
 }

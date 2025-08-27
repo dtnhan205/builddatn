@@ -127,6 +127,7 @@ export default function AboutPage() {
             <img
               src={getImageUrl(suppBanner1)}
               alt="Ý Nghĩa Thương Hiệu Pure-Botanica"
+              className={styles.imgabout}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
                 console.log("Không thể tải hình ảnh suppbanner1.");
@@ -148,6 +149,7 @@ export default function AboutPage() {
             <img
               src={getImageUrl(suppBanner2)}
               alt="Sứ Mệnh Pure-Botanica"
+              className={styles.imgabout}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
                 console.log("Không thể tải hình ảnh suppbanner2.");
@@ -206,6 +208,7 @@ export default function AboutPage() {
               <img
                 src={getImageUrl(suppBanner3)}
                 alt="Giá Trị Thương Hiệu Pure-Botanica"
+                className={styles.imgabout}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
                   console.log("Không thể tải hình ảnh suppbanner3.");

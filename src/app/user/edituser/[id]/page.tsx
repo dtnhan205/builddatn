@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { use } from "react";
 import { User, Option } from "@/app/components/user_interface";
+import ToastNotification from "../../ToastNotification/ToastNotification";
 import styles from "./edituser.module.css";
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
@@ -28,6 +29,7 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({
     username: "",
     email: "",
@@ -50,6 +52,10 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
     cityOrProvince: "",
   });
   const router = useRouter();
+
+  const hideToast = () => {
+    setMessage(null);
+  };
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -92,7 +98,6 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
 
         const { password, passwordResetToken, emailVerificationToken, ...safeUserData } = responseData;
 
-        // Chuyển đổi address từ chuỗi (nếu API trả về chuỗi) sang object
         const addressParts = responseData.address && typeof responseData.address === "string" && responseData.address.includes(", ")
           ? {
               addressLine: responseData.address.split(", ")[0]?.trim() || "",
@@ -209,7 +214,6 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
         throw new Error("Không có token. Vui lòng đăng nhập lại.");
       }
 
-      // Client-side validation
       if (!formData.email?.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
         throw new Error("Email không hợp lệ.");
       }
@@ -223,7 +227,6 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
         throw new Error("Ngày sinh không hợp lệ.");
       }
 
-      // Extend formattedData type to allow status for admin
       const formattedData: {
         username: string;
         email: string;
@@ -235,7 +238,6 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
         username: formData.username || "",
         email: formData.email || "",
         phone: formData.phone || "",
-        // Chuyển address thành chuỗi nếu API yêu cầu chuỗi
         address: formData.address
           ? [
               formData.address.addressLine,
@@ -251,8 +253,6 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
 
       if (user?.role === "admin") {
         formattedData.status = user.status || "active";
-        // Nếu interface User có role, cần thêm role vào formattedData
-        // formattedData.role = user.role || "user";
       }
 
       console.log("Sending user_info for submit_action:", JSON.stringify(formattedData, null, 2));
@@ -287,14 +287,16 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
       }
 
       if (responseData.message === "Cập nhật thành công") {
-        alert("Cập nhật thông tin thành công!");
-        router.push("/user/userinfo");
+        setMessage({ text: "Cập nhật thông tin thành công!", type: "success" });
+        setTimeout(() => {
+          router.push("/user/userinfo");
+        }, 2000); // Chuyển hướng sau 2 giây
       } else {
         throw new Error("Cập nhật không thành công. Vui lòng thử lại.");
       }
     } catch (err: any) {
       console.error("Lỗi trong handleSubmit:", err);
-      setError(err.message || "Lỗi khi gửi submit_action.");
+      setMessage({ text: err.message || "Lỗi khi gửi submit_action.", type: "error" });
       if (err.message.includes("đăng nhập")) {
         console.log("Clearing localStorage and redirecting to /user/login");
         localStorage.removeItem("token");
@@ -312,6 +314,13 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
 
   return (
     <div className={styles.container}>
+      {message && (
+        <ToastNotification
+          message={message.text}
+          type={message.type}
+          onClose={hideToast}
+        />
+      )}
       <h2 className={styles.title}>Chỉnh sửa user_info</h2>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formGroup}>
@@ -327,25 +336,25 @@ export default function EditUser({ params }: { params: Promise<{ id: string }> }
             placeholder="Nhập tên"
             className={styles.input}
             required={!user.googleId}
-          />  
+          />
         </div>
-       <div className={styles.formGroup}>
-  <label htmlFor="email" className={styles.label}>
-    Email:
-  </label>
-  <input
-    id="email"
-    type="email"
-    name="email"
-    value={formData.email || ""}
-    onChange={handleInputChange}
-    required
-    placeholder="Nhập email"
-    className={styles.input}
-    disabled // Add this to prevent email changes
-  />
-  <small className={styles.note}>Email không thể thay đổi.</small> {/* Optional: Inform the user */}
-          </div>
+        <div className={styles.formGroup}>
+          <label htmlFor="email" className={styles.label}>
+            Email:
+          </label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            value={formData.email || ""}
+            onChange={handleInputChange}
+            required
+            placeholder="Nhập email"
+            className={styles.input}
+            disabled
+          />
+          <small className={styles.note}>Email không thể thay đổi.</small>
+        </div>
         <div className={styles.formGroup}>
           <label htmlFor="phone" className={styles.label}>
             SĐT:

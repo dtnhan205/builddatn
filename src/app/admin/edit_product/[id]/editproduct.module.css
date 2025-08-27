@@ -1,5 +1,5 @@
 .mainContainer {
-  min-height: 100vh;
+ width:1920px;
   background: #f8fafc;
   font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
@@ -26,7 +26,7 @@
 }
 
 .contentWrapper {
-  max-width: 1200px;
+  max-width: 1920px;
   width: 100%;
   padding: 24px;
   background: #ffffff;
@@ -82,6 +82,12 @@
   font-size: 16px;
   box-sizing: border-box;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.error {
+  color: red;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
 }
 
 .input:focus,

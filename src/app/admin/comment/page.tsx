@@ -458,25 +458,25 @@ const CommentPage: React.FC = () => {
         />
       )}
       {selectedImage && (
-        <div className={styles.imageModal} onClick={handleOverlayClick}>
-          <div className={styles.modalContent}>
+        <div className={`${styles.zoomedImageOverlay} ${selectedImage ? styles.show : ''}`} onClick={closeImageModal}>
+          <div className={styles.zoomedImageContainer} onClick={(e) => e.stopPropagation()}>
+            <img
+              src={selectedImage || "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg"}
+              alt="Hình ảnh phóng to"
+              className={styles.zoomedImage}
+              onError={(e) => {
+                console.error(`Image load failed for enlarged image: ${selectedImage}`);
+                (e.target as HTMLImageElement).src = "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
+              }}
+            />
             <button
-              className={styles.closeModalButton}
+              className={styles.closeZoomButton}
               onClick={closeImageModal}
-              title="Đóng hình ảnh"
+              title="Đóng"
               aria-label="Đóng hình ảnh phóng to"
             >
               <FontAwesomeIcon icon={faTimes} />
             </button>
-            <img
-              src={selectedImage}
-              alt="Hình ảnh phóng to"
-              className={styles.modalImage}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
-              }}
-            />
           </div>
         </div>
       )}

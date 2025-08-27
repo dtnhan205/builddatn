@@ -34,13 +34,12 @@
 
 .searchInput {
   flex: 1;
-  width: 550px;
-  padding: 12px 16px 12px 40px;
+  width: 300px;
+  padding: 12px 16px 12px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 14px;
   color: #334155;
-  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") no-repeat 12px center;
   background-size: 18px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -97,7 +96,7 @@
 }
 
 .tableContainer {
-  max-width: 1400px;
+  max-width: 1920px;
   margin: 0 2rem;
   background: #ffffff;
   border-radius: 12px;
@@ -126,9 +125,84 @@
 
 .productTable td {
   padding: 14px 16px;
-  border-bottom: 1px solid #e2e8f0;
   font-size: 14px;
   color: #334155;
+}
+
+/* Fix cho ô tên danh mục để không bị layout shift */
+.productTable td:first-child {
+  min-width: 200px; /* Đặt chiều rộng tối thiểu cố định */
+  max-width: 300px; /* Đặt chiều rộng tối đa */
+  width: 250px; /* Chiều rộng cố định */
+}
+
+/* Style cho container chỉnh sửa */
+.editingContainer {
+  min-height: 48px; /* Chiều cao tối thiểu cố định */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Style cho input trong chế độ chỉnh sửa */
+.editInput {
+  width: 300px !important;
+  min-width: unset !important;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #334155;
+  background: #ffffff;
+  box-sizing: border-box;
+  margin: 0;
+  height: 36px; /* Chiều cao cố định */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.editInput:focus {
+  border-color: #4CAF50;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+/* Style cho text hiển thị bình thường */
+.categoryName {
+  min-height: 36px; /* Cùng chiều cao với input */
+  display: flex;
+  align-items: center;
+  line-height: 1.4;
+}
+
+/* Fix cho formGroup trong chế độ edit */
+.formGroup {
+  margin: 0;
+  width: 100%;
+  position: relative;
+}
+
+/* Error message không làm thay đổi layout */
+.errorMessage {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 2px;
+  z-index: 10;
+  border: 1px solid #fecaca;
+}
+
+/* Container cho ô có thể edit */
+.editableCell {
+  position: relative;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
 }
 
 /* Thêm kiểu cho cột Sản phẩm (giả định là cột thứ 2) */
@@ -255,6 +329,7 @@
   justify-content: center;
   color: #64748b;
   font-size: 14px;
+  cursor: pointer;
 }
 
 .ellipsis:hover {
@@ -521,6 +596,24 @@
   color: #334155;
 }
 
+.newInput {
+  flex: 1;
+  min-width: 280px;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  background-size: 18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.newInput:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Cải thiện responsive */
 @media (max-width: 1280px) {
   .titleContainer,
   .tableContainer,
@@ -556,17 +649,23 @@
     font-size: 13px;
   }
 
+  .productTable td:first-child {
+    min-width: 150px;
+    width: 180px;
+    max-width: 200px;
+  }
+  
+  .editInput {
+    font-size: 13px;
+    padding: 6px 10px;
+    height: 32px;
+  }
+  
+  .categoryName {
+    min-height: 32px;
+  }
+
   .productTable td:nth-child(2) {
     max-width: 150px; /* Giảm chiều rộng cột Sản phẩm trên màn hình nhỏ */
   }
-}
-.newInput {
-  flex: 1;
-  min-width: 280px;
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #334155;
-  background-size: 18px;
 }

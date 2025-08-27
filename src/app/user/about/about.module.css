@@ -199,3 +199,109 @@
 .textBold {
     font-weight: bold;
 }
+/* Tablet Responsive */
+@media (max-width: 1024px) {
+  .main {
+    max-width: 100%;
+    width: 100%;
+    padding: 16px 8px;
+  }
+  .bannerTitle img {
+    max-height: 400px;
+  }
+  .imgabout{
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+  }
+  .title h1,
+  .brandMeaning h2,
+  .commitmentAction h2,
+  .brandValue h2 {
+    font-size: 2rem;
+  }
+  .brandMeaning p,
+  .commitmentAction p,
+  .brandValue p {
+    font-size: 1rem;
+  }
+  .brandValue {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .brandValueLeft,
+  .brandValueRight,
+  .brandValueBottom {
+    width: 100%;
+    order: unset;
+  }
+  .brandValue .brandImg,
+  .mission .missionImg,
+  .brandMeaning .brandImg {
+    margin: 24px auto;
+    max-width: 100%;
+    height: auto;
+  }
+  .commitmentAction .highlightText {
+    font-size: 1.2rem;
+    margin-top: 24px;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  .main {
+    max-width: 100vw;
+    width: 100vw;
+    padding: 6px 2px;
+  }
+  .bannerTitle img {
+    max-height: 180px;
+  }
+  .title {
+    padding: 10px 0;
+  }
+  .title h1,
+  .brandMeaning h2,
+  .commitmentAction h2,
+  .brandValue h2 {
+    font-size: 1.2rem;
+    padding: 0 2px;
+  }
+  .brandMeaning p,
+  .commitmentAction p,
+  .brandValue p {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    padding: 0 2px;
+  }
+  .brandMeaning .brandImg,
+  .mission .missionImg,
+  .brandValue .brandImg {
+    margin: 12px auto;
+    max-width: 100vw;
+    height: auto;
+    border-radius: 6px;
+  }
+  .commitmentAction .highlightText {
+    font-size: 1rem;
+    margin-top: 12px;
+    padding: 0 2px;
+  }
+  .brandValue {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .brandValueLeft,
+  .brandValueRight,
+  .brandValueBottom {
+    width: 100%;
+    order: unset;
+    padding: 0 2px;
+  }
+  .sectionTitle {
+    margin-bottom: 18px;
+    font-size: 1rem;
+    padding: 0 2px;
+  }
+}

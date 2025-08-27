@@ -15,7 +15,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faRedo, faEdit } from "@fortawesome/free-solid-svg-icons";
@@ -102,6 +102,13 @@ interface Notification {
   type: "success" | "error";
 }
 
+interface BestSellingProduct {
+  productId: string;
+  productName: string;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -135,21 +142,21 @@ const paymentStatusMapping = {
   completed: "Đã thanh toán",
   failed: "Thất bại",
   cancelled: "Đã hoàn",
-};
+} as const;
 
 const shippingStatusMapping = {
   pending: "Chờ xử lý",
   in_transit: "Đang vận chuyển",
   delivered: "Đã giao hàng",
   returned: "Đã hoàn",
-};
+} as const;
 
 const reverseShippingStatusMapping = {
   "Chờ xử lý": "pending",
   "Đang vận chuyển": "in_transit",
   "Đã giao hàng": "delivered",
   "Đã hoàn": "returned",
-};
+} as const;
 
 const statusProgression: { [key: string]: string[] } = {
   pending: ["in_transit"],
@@ -196,6 +203,7 @@ const renderStars = (rating: number | undefined) => {
 
 const AD_Home: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const currentDate = new Date();
   const [timePeriod, setTimePeriod] = useState<"week" | "month" | "year">("week");
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth());
@@ -249,8 +257,51 @@ const AD_Home: React.FC = () => {
   const [searchQueryComments, setSearchQueryComments] = useState<string>("");
   const [replyContent, setReplyContent] = useState<{ [key: string]: string }>({});
   const [isEditingReply, setIsEditingReply] = useState<{ [key: string]: boolean }>({});
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const ordersPerPage = 8;
   const commentsPerPage = 9;
+
+  const [bestSellingProducts, setBestSellingProducts] = useState<BestSellingProduct[]>([]);
+  const [filteredBestSellingProducts, setFilteredBestSellingProducts] = useState<BestSellingProduct[]>([]);
+  const [currentPageProducts, setCurrentPageProducts] = useState<number>(1);
+  const [searchQueryProducts, setSearchQueryProducts] = useState<string>("");
+  const productsPerPage = 5;
+
+  // Reload logic
+  useEffect(() => {
+    const now = Date.now();
+    const lastLoad = sessionStorage.getItem("lastAdminLoad");
+    const reloadRequested = searchParams.get("reload") === "true";
+    const timeSinceLastLoad = lastLoad ? now - parseInt(lastLoad, 10) : Infinity;
+
+    // Trigger reload if:
+    // 1. reload=true query parameter is present, OR
+    // 2. No previous load timestamp exists, OR
+    // 3. More than 1 second has passed since the last reload (to prevent rapid reloads)
+    if (reloadRequested || !lastLoad || timeSinceLastLoad > 1000) {
+      // Update timestamp and clear query parameter
+      sessionStorage.setItem("lastAdminLoad", now.toString());
+      window.history.replaceState({}, "", "/admin"); // Remove ?reload=true
+      window.location.reload();
+    }
+
+    // Track navigation away from /admin using browser navigation events
+    const handlePopState = () => {
+      if (
+        window.location.pathname !== "/admin" &&
+        window.location.pathname !== "/admin?reload=true"
+      ) {
+        sessionStorage.removeItem("lastAdminLoad"); // Reset timestamp when leaving /admin
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [searchParams]);
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -534,6 +585,7 @@ const AD_Home: React.FC = () => {
         showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
         localStorage.removeItem("token");
         localStorage.removeItem("role");
+        localStorage.removeItem("email");
         router.push("/user/login");
         return;
       }
@@ -576,7 +628,6 @@ const AD_Home: React.FC = () => {
         return;
       }
 
-      console.log(`Sending PUT request to /api/comments/reply/${commentId}`);
       const res = await fetch(`https://api-zeal.onrender.com/api/comments/reply/${commentId}`, {
         method: "PUT",
         headers: {
@@ -590,6 +641,7 @@ const AD_Home: React.FC = () => {
         showNotification("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!", "error");
         localStorage.removeItem("token");
         localStorage.removeItem("role");
+        localStorage.removeItem("email");
         router.push("/user/login");
         return;
       }
@@ -606,14 +658,10 @@ const AD_Home: React.FC = () => {
 
       const updatedComment = await res.json();
       setComments((prevComments) =>
-        prevComments.map((c) =>
-          c._id === commentId ? updatedComment.comment : c
-        )
+        prevComments.map((c) => (c._id === commentId ? updatedComment.comment : c))
       );
       setFilteredComments((prevComments) =>
-        prevComments.map((c) =>
-          c._id === commentId ? updatedComment.comment : c
-        )
+        prevComments.map((c) => (c._id === commentId ? updatedComment.comment : c))
       );
       setReplyContent((prev) => ({ ...prev, [commentId]: "" }));
       setIsEditingReply((prev) => ({ ...prev, [commentId]: false }));
@@ -628,6 +676,14 @@ const AD_Home: React.FC = () => {
   const handleCancelEdit = (commentId: string) => {
     setIsEditingReply((prev) => ({ ...prev, [commentId]: false }));
     setReplyContent((prev) => ({ ...prev, [commentId]: "" }));
+  };
+
+  const handleImageClick = (imageUrl: string) => {
+    setZoomedImage(imageUrl);
+  };
+
+  const closeZoomedImage = () => {
+    setZoomedImage(null);
   };
 
   const chartOptions = useMemo<ChartOptions<"line">>(
@@ -755,10 +811,73 @@ const AD_Home: React.FC = () => {
     };
   }, []);
 
+  const calculateBestSellingProducts = useMemo(() => {
+    return (orders: Order[], period: string, month: number, year: number, week?: number): BestSellingProduct[] => {
+      const productMap: { [key: string]: BestSellingProduct } = {};
+
+      // Filter orders by the selected time period
+      const filteredOrders = orders.filter((order) => {
+        const orderDate = new Date(order.createdAt);
+        if (period === "week" && week !== undefined) {
+          const firstDayOfMonth = new Date(year, month, 1);
+          const firstMonday = new Date(firstDayOfMonth);
+          if (firstDayOfMonth.getDay() !== 1) {
+            const offset = firstDayOfMonth.getDay() === 0 ? -6 : 1 - firstDayOfMonth.getDay();
+            firstMonday.setDate(firstDayOfMonth.getDate() + offset);
+          }
+          const weekStart = new Date(firstMonday);
+          weekStart.setDate(firstMonday.getDate() + (week - 1) * 7);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          return orderDate >= weekStart && orderDate <= weekEnd;
+        } else if (period === "month") {
+          return (
+            orderDate.getFullYear() === year &&
+            orderDate.getMonth() === month
+          );
+        } else {
+          return orderDate.getFullYear() === year;
+        }
+      });
+
+      // Aggregate quantities and revenue per product
+      filteredOrders.forEach((order) => {
+        if (order.paymentStatus === "completed") {
+          order.items.forEach((item) => {
+            if (item.product) {
+              const productId = item.product._id;
+              const productName = item.product.name || "Sản phẩm không xác định";
+              const price = item.product.price || 0;
+              const quantity = item.quantity || 0;
+
+              if (!productMap[productId]) {
+                productMap[productId] = {
+                  productId,
+                  productName,
+                  totalQuantity: 0,
+                  totalRevenue: 0,
+                };
+              }
+              productMap[productId].totalQuantity += quantity;
+              productMap[productId].totalRevenue += quantity * price;
+            }
+          });
+        }
+      });
+
+      // Convert to array and sort by total quantity
+      const bestSellingProducts = Object.values(productMap).sort(
+        (a, b) => b.totalQuantity - a.totalQuantity
+      );
+
+      return bestSellingProducts;
+    };
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      router.push("/user/login");
+      router.replace("/user/login");
       return;
     }
 
@@ -767,11 +886,13 @@ const AD_Home: React.FC = () => {
       decoded = jwtDecode<DecodedToken>(token);
       if (decoded.role !== "admin") {
         setError("Bạn không có quyền truy cập trang này.");
+        router.replace("/user/login");
         return;
       }
     } catch (err) {
       console.error("Lỗi khi giải mã token:", err);
       setError("Token không hợp lệ.");
+      router.replace("/user/login");
       return;
     }
 
@@ -847,6 +968,9 @@ const AD_Home: React.FC = () => {
         const newUsers = users.filter((u) => isInPeriod(new Date(u.createdAt))).length;
         const newComments = comments.filter((c) => isInPeriod(new Date(c.createdAt))).length;
 
+        // Calculate best-selling products
+        const bestSelling = calculateBestSellingProducts(orders, timePeriod, selectedMonth, selectedYear, selectedWeek);
+
         setStats({ orders: ordersInPeriod.length, newUsers, revenue, newComments });
         setChartData(calculateRevenue(orders, timePeriod, selectedMonth, selectedYear, selectedWeek));
         setRecentOrders(
@@ -858,6 +982,8 @@ const AD_Home: React.FC = () => {
         setFilteredPendingOrders(filteredPendingOrders);
         setComments(comments);
         setFilteredComments(comments);
+        setBestSellingProducts(bestSelling);
+        setFilteredBestSellingProducts(bestSelling);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
         setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
@@ -867,7 +993,7 @@ const AD_Home: React.FC = () => {
     };
 
     fetchData();
-  }, [timePeriod, selectedMonth, selectedYear, selectedWeek, router, calculateRevenue]);
+  }, [timePeriod, selectedMonth, selectedYear, selectedWeek, router, calculateRevenue, calculateBestSellingProducts]);
 
   useEffect(() => {
     const filtered = pendingOrders.filter((order) => {
@@ -906,6 +1032,14 @@ const AD_Home: React.FC = () => {
     setCurrentPageComments(1);
   }, [searchQueryComments, comments]);
 
+  useEffect(() => {
+    const filtered = bestSellingProducts.filter((product) =>
+      product.productName.toLowerCase().includes(searchQueryProducts.toLowerCase())
+    );
+    setFilteredBestSellingProducts(filtered);
+    setCurrentPageProducts(1);
+  }, [searchQueryProducts, bestSellingProducts]);
+
   const totalPagesOrders = Math.ceil(filteredPendingOrders.length / ordersPerPage);
   const paginatedOrders = useMemo(() => {
     const startIndex = (currentPageOrders - 1) * ordersPerPage;
@@ -917,6 +1051,12 @@ const AD_Home: React.FC = () => {
   const indexOfFirstComment = indexOfLastComment - commentsPerPage;
   const currentComments = filteredComments.slice(indexOfFirstComment, indexOfLastComment);
 
+  const totalPagesProducts = Math.ceil(filteredBestSellingProducts.length / productsPerPage);
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPageProducts - 1) * productsPerPage;
+    return filteredBestSellingProducts.slice(startIndex, startIndex + productsPerPage);
+  }, [filteredBestSellingProducts, currentPageProducts]);
+
   const handlePageChangeOrders = (page: number) => {
     if (page >= 1 && page <= totalPagesOrders) {
       setCurrentPageOrders(page);
@@ -927,6 +1067,12 @@ const AD_Home: React.FC = () => {
     if (page >= 1 && page <= totalPagesComments) {
       setCurrentPageComments(page);
       setSelectedCommentId(null);
+    }
+  };
+
+  const handlePageChangeProducts = (page: number) => {
+    if (page >= 1 && page <= totalPagesProducts) {
+      setCurrentPageProducts(page);
     }
   };
 
@@ -976,6 +1122,32 @@ const AD_Home: React.FC = () => {
         visiblePages.push(currentPageComments - 1, currentPageComments, currentPageComments + 1);
         showPrevEllipsis = currentPageComments > 2;
         showNextEllipsis = currentPageComments < totalPagesComments - 1;
+      }
+    }
+
+    return { visiblePages, showPrevEllipsis, showNextEllipsis };
+  };
+
+  const getPaginationInfoProducts = () => {
+    const visiblePages: number[] = [];
+    let showPrevEllipsis = false;
+    let showNextEllipsis = false;
+
+    if (totalPagesProducts <= 3) {
+      for (let i = 1; i <= totalPagesProducts; i++) {
+        visiblePages.push(i);
+      }
+    } else {
+      if (currentPageProducts === 1) {
+        visiblePages.push(1, 2, 3);
+        showNextEllipsis = totalPagesProducts > 3;
+      } else if (currentPageProducts === totalPagesProducts) {
+        visiblePages.push(totalPagesProducts - 2, totalPagesProducts - 1, totalPagesProducts);
+        showPrevEllipsis = totalPagesProducts > 3;
+      } else {
+        visiblePages.push(currentPageProducts - 1, currentPageProducts, currentPageProducts + 1);
+        showPrevEllipsis = currentPageProducts > 2;
+        showNextEllipsis = currentPageProducts < totalPagesProducts - 1;
       }
     }
 
@@ -1065,7 +1237,7 @@ const AD_Home: React.FC = () => {
         </div>
         <div className={styles.statBox}>
           <h3>{loading ? "..." : stats.newComments}</h3>
-          <p>Bình luận mới</p>
+          <p>Đánh giá mới</p>
         </div>
       </section>
 
@@ -1459,6 +1631,8 @@ const AD_Home: React.FC = () => {
             </div>
           )}
         </section>
+
+        
       </div>
 
       {selectedCommentId && (
@@ -1497,7 +1671,6 @@ const AD_Home: React.FC = () => {
                             <p>
                               <strong>Tên sản phẩm:</strong> {comment.product?.name || "Không có"}
                             </p>
-                          
                           </div>
                         </div>
                         <div className={styles.detailsSection}>
@@ -1514,6 +1687,8 @@ const AD_Home: React.FC = () => {
                                     src={normalizeImageUrl(image.url)}
                                     alt={`Hình ảnh ${image.public_id}`}
                                     className={styles.commentImage}
+                                    onClick={() => handleImageClick(normalizeImageUrl(image.url))}
+                                    style={{ cursor: "pointer" }}
                                     onError={(e) => {
                                       (e.target as HTMLImageElement).src =
                                         "https://png.pngtree.com/png-vector/20210227/ourlarge/pngtree-error-404-glitch-effect-png-image_2943478.jpg";
@@ -1746,6 +1921,26 @@ const AD_Home: React.FC = () => {
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {zoomedImage && (
+        <div className={styles.zoomedImageOverlay} onClick={closeZoomedImage}>
+          <div className={styles.zoomedImageContainer} onClick={(e) => e.stopPropagation()}>
+            <img
+              src={zoomedImage}
+              alt="Hình ảnh phóng to"
+              className={styles.zoomedImage}
+            />
+            <button
+              className={styles.closeZoomButton}
+              onClick={closeZoomedImage}
+              aria-label="Đóng hình ảnh phóng to"
+              title="Đóng"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
           </div>
         </div>
       )}

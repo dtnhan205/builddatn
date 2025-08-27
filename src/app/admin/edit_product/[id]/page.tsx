@@ -6,7 +6,48 @@ import Image from "next/image";
 import styles from "./editproduct.module.css";
 import ToastNotification from "../../../user/ToastNotification/ToastNotification";
 
+// Hàm slugify tùy chỉnh cho tiếng Việt
+const slugify = (text: string): string => {
+  const vietnameseMap: { [key: string]: string } = {
+    'á': 'a', 'à': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+    'ă': 'a', 'ắ': 'a', 'ằ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+    'â': 'a', 'ấ': 'a', 'ầ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+    'é': 'e', 'è': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+    'ê': 'e', 'ế': 'e', 'ề': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+    'í': 'i', 'ì': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+    'ó': 'o', 'ò': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+    'ô': 'o', 'ố': 'o', 'ồ': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+    'ơ': 'o', 'ớ': 'o', 'ờ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+    'ú': 'u', 'ù': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+    'ư': 'u', 'ứ': 'u', 'ừ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+    'ý': 'y', 'ỳ': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+    'đ': 'd',
+    'Á': 'A', 'À': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
+    'Ă': 'A', 'Ắ': 'A', 'Ằ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
+    'Â': 'A', 'Ấ': 'A', 'Ầ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
+    'É': 'E', 'È': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
+    'Ê': 'E', 'Ế': 'E', 'Ề': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
+    'Í': 'I', 'Ì': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
+    'Ó': 'O', 'Ò': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
+    'Ô': 'O', 'Ố': 'O', 'Ồ': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
+    'Ơ': 'O', 'Ớ': 'O', 'Ờ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
+    'Ú': 'U', 'Ù': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
+    'Ư': 'U', 'Ứ': 'U', 'Ừ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
+    'Ý': 'Y', 'Ỳ': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
+  };
 
+  let slug = text
+    .split('')
+    .map((char) => vietnameseMap[char] || char)
+    .join('')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return slug || 'unnamed';
+};
 
 interface Option {
   value: string;
@@ -57,6 +98,17 @@ interface ActiveFormats {
   insertOrderedList: boolean;
 }
 
+interface Errors {
+  name?: string;
+  slug?: string;
+  id_category?: string;
+  id_brand?: string;
+  short_description?: string;
+  description?: string;
+  options?: string;
+  images?: string;
+}
+
 const EditProduct = () => {
   const router = useRouter();
   const { id: slug } = useParams();
@@ -74,8 +126,10 @@ const EditProduct = () => {
     insertUnorderedList: false,
     insertOrderedList: false,
   });
+  const [errors, setErrors] = useState<Errors>({});
   const [formData, setFormData] = useState({
     name: "",
+    slug: "",
     status: "show" as "show" | "hidden",
     id_category: "",
     id_brand: "",
@@ -153,7 +207,7 @@ const EditProduct = () => {
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const productResponse = await fetch(`https://api-zeal.onrender.com/api/products/${slug}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -204,6 +258,7 @@ const EditProduct = () => {
         setBrands(brandsData);
         setFormData({
           name: productData.name || "",
+          slug: productData.slug || "",
           status: productData.status || "show",
           id_category: typeof productData.id_category === "string" ? productData.id_category : productData.id_category?._id || "",
           id_brand: typeof productData.id_brand === "string" ? productData.id_brand : productData.id_brand?._id || "",
@@ -250,11 +305,113 @@ const EditProduct = () => {
     }, 3000);
   };
 
+  const validateName = (name: string): string => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return "Tên sản phẩm không được để trống.";
+    return "";
+  };
+
+  const validateSlug = (slug: string): string => {
+    if (!slug || slug === "unnamed") return "Slug không hợp lệ.";
+    return "";
+  };
+
+  const validateCategory = (id_category: string): string => {
+    if (!id_category) return "Vui lòng chọn danh mục.";
+    const category = categories.find((cat) => cat._id === id_category);
+    if (!category || category.status === "hidden") return "Danh mục không hợp lệ hoặc đã bị ẩn.";
+    return "";
+  };
+
+  const validateBrand = (id_brand: string): string => {
+    if (!id_brand) return "Vui lòng chọn thương hiệu.";
+    const brand = brands.find((b) => b._id === id_brand);
+    if (!brand || brand.status === "hidden") return "Thương hiệu không hợp lệ hoặc đã bị ẩn.";
+    return "";
+  };
+
+  const validateShortDescription = (short_description: string): string => {
+    const trimmedDesc = short_description.trim();
+    if (!trimmedDesc) return "Mô tả ngắn không được để trống.";
+    if (/\s{2,}/.test(trimmedDesc)) return "Mô tả ngắn không được chứa nhiều dấu cách liên tiếp.";
+    return "";
+  };
+
+  const validateDescription = (description: string): string => {
+    if (!description.trim() || description === "<p><br></p>") return "Mô tả chi tiết không được để trống.";
+    return "";
+  };
+
+  const validateOptions = (options: Option[]): string => {
+    if (options.length === 0) return "Phải có ít nhất một tùy chọn sản phẩm.";
+
+    const sizeUnitSet = new Set<string>();
+    const firstUnit = options[0].unit;
+
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+
+      if (opt.unit !== firstUnit) {
+        return `Tùy chọn ${i + 1}: Đơn vị phải giống với tùy chọn đầu tiên (${firstUnit}).`;
+      }
+
+      if (!opt.value.trim()) return `Tùy chọn ${i + 1}: Kích thước không được để trống.`;
+      const valueNum = parseFloat(opt.value);
+      if (isNaN(valueNum) || valueNum <= 0) return `Tùy chọn ${i + 1}: Kích thước phải là số lớn hơn 0.`;
+      if (!opt.unit) return `Tùy chọn ${i + 1}: Đơn vị không được để trống.`;
+
+      const sizeUnit = `${opt.value}${opt.unit}`;
+      if (sizeUnitSet.has(sizeUnit)) return `Tùy chọn ${i + 1}: Kích thước đã tồn tại.`;
+      sizeUnitSet.add(sizeUnit);
+
+      if (!opt.price.trim()) return `Tùy chọn ${i + 1}: Giá gốc không được để trống.`;
+      const priceNum = parseFloat(opt.price);
+      if (isNaN(priceNum) || priceNum <= 0) return `Tùy chọn ${i + 1}: Giá gốc phải là số lớn hơn 0.`;
+
+      if (opt.discount_price) {
+        const discountNum = parseFloat(opt.discount_price);
+        if (isNaN(discountNum) || discountNum < 0) return `Tùy chọn ${i + 1}: Giá khuyến mãi không được âm.`;
+        if (discountNum >= priceNum) return `Tùy chọn ${i + 1}: Giá khuyến mãi phải nhỏ hơn giá gốc.`;
+      }
+
+      if (!opt.stock.trim()) return `Tùy chọn ${i + 1}: Số lượng không được để trống.`;
+      const stockNum = parseFloat(opt.stock);
+      if (isNaN(stockNum) || stockNum < 0) return `Tùy chọn ${i + 1}: Số lượng không được âm.`;
+      if (!Number.isInteger(stockNum)) return `Tùy chọn ${i + 1}: Số lượng phải là số nguyên.`;
+    }
+    return "";
+  };
+
+  const validateImages = (images: File[], existingImages: string[]): string => {
+    if (images.length + existingImages.length === 0) return "Vui lòng chọn ít nhất một hình ảnh.";
+    if (images.length + existingImages.length > 4) return "Tổng số ảnh không được vượt quá 4 ảnh.";
+    return "";
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const trimmedValue = (name === "name" || name === "short_description") ? value.trim() : value;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: trimmedValue,
+      ...(name === "name" && { slug: slugify(trimmedValue) }),
+    }));
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      [name as keyof Errors]:
+        name === "name"
+          ? validateName(trimmedValue)
+          : name === "id_category"
+          ? validateCategory(trimmedValue)
+          : name === "id_brand"
+          ? validateBrand(trimmedValue)
+          : name === "short_description"
+          ? validateShortDescription(trimmedValue)
+          : prevErrors[name as keyof Errors],
+      ...(name === "name" && { slug: validateSlug(slugify(trimmedValue)) }),
+    }));
   };
 
   const handleOptionChange = (index: number, field: string, value: string) => {
@@ -263,12 +420,13 @@ const EditProduct = () => {
       newOptions[index] = { ...newOptions[index], [field]: value };
       return { ...prev, option: newOptions };
     });
+    setErrors((prevErrors) => ({ ...prevErrors, options: validateOptions(formData.option) }));
   };
 
   const addOption = () => {
     setFormData((prev) => ({
       ...prev,
-      option: [...prev.option, { value: "", unit: "ml", price: "", discount_price: "", stock: "" }],
+      option: [...prev.option, { value: "", unit: prev.option[0]?.unit || "ml", price: "", discount_price: "", stock: "" }],
     }));
   };
 
@@ -277,6 +435,7 @@ const EditProduct = () => {
       ...prev,
       option: prev.option.filter((_, i) => i !== index),
     }));
+    setErrors((prevErrors) => ({ ...prevErrors, options: validateOptions(formData.option) }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,11 +450,13 @@ const EditProduct = () => {
         ...prev,
         images: [...prev.images, ...files],
       }));
+      setErrors((prevErrors) => ({ ...prevErrors, images: validateImages([...formData.images, ...files], existingImages) }));
     }
   };
 
   const removeExistingImage = (index: number) => {
     setExistingImages((prev) => prev.filter((_, i) => i !== index));
+    setErrors((prevErrors) => ({ ...prevErrors, images: validateImages(formData.images, existingImages.filter((_, i) => i !== index)) }));
   };
 
   const removeNewImage = (index: number) => {
@@ -303,6 +464,7 @@ const EditProduct = () => {
       ...prev,
       images: prev.images.filter((_, i) => i !== index),
     }));
+    setErrors((prevErrors) => ({ ...prevErrors, images: validateImages(formData.images.filter((_, i) => i !== index), existingImages) }));
   };
 
   const execCommand = (command: string, value?: string) => {
@@ -373,29 +535,71 @@ const EditProduct = () => {
 
   const handleDescriptionChange = () => {
     if (editorRef.current) {
+      const description = editorRef.current.innerHTML;
       setFormData((prev) => ({
         ...prev,
-        description: editorRef.current!.innerHTML,
+        description,
       }));
+      setErrors((prevErrors) => ({ ...prevErrors, description: validateDescription(description) }));
     }
     updateFormatStates();
+  };
+
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const trimmedValue = (name === "name" || name === "short_description") ? value.trim() : value;
+    if (name === "name") {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        name: validateName(trimmedValue),
+        slug: validateSlug(slugify(trimmedValue)),
+      }));
+    } else {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        [name as keyof Errors]:
+          name === "id_category"
+            ? validateCategory(trimmedValue)
+            : name === "id_brand"
+            ? validateBrand(trimmedValue)
+            : name === "short_description"
+            ? validateShortDescription(trimmedValue)
+            : prevErrors[name as keyof Errors],
+      }));
+    }
+  };
+
+  const handleOptionBlur = (index: number, field: string) => {
+    setErrors((prevErrors) => ({ ...prevErrors, options: validateOptions(formData.option) }));
+  };
+
+  const handleImageBlur = () => {
+    setErrors((prevErrors) => ({ ...prevErrors, images: validateImages(formData.images, existingImages) }));
+  };
+
+  const handleDescriptionBlur = () => {
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      description: validateDescription(formData.description),
+    }));
+  };
+
+  const validateForm = (): Errors => {
+    return {
+      name: validateName(formData.name),
+      slug: validateSlug(formData.slug),
+      id_category: validateCategory(formData.id_category),
+      id_brand: validateBrand(formData.id_brand),
+      short_description: validateShortDescription(formData.short_description),
+      description: validateDescription(formData.description),
+      options: validateOptions(formData.option),
+      images: validateImages(formData.images, existingImages),
+    };
   };
 
   const renderToolbar = () => (
     <div className={styles.toolbar}>
       <div className={styles.toolbarGroup}>
-        <select
-          className={styles.toolbarSelect}
-          onChange={(e) => changeFontFamily(e.target.value)}
-          value={document.queryCommandValue("fontName").replace(/"/g, "") || ""}
-        >
-          <option value="">Font</option>
-          <option value="Arial">Arial</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Helvetica">Helvetica</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Verdana">Verdana</option>
-        </select>
         <select
           className={styles.toolbarSelect}
           onChange={(e) => changeFontSize(e.target.value)}
@@ -481,16 +685,12 @@ const EditProduct = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.id_category || !formData.id_brand || !formData.short_description || !formData.description) {
-      showNotification("Vui lòng điền đầy đủ các trường bắt buộc.", "error");
-      return;
-    }
-    if (formData.option.some((opt) => !opt.value || !opt.unit || !opt.price || !opt.stock)) {
-      showNotification("Vui lòng điền đầy đủ thông tin cho tất cả tùy chọn.", "error");
-      return;
-    }
-    if (formData.images.length + existingImages.length === 0) {
-      showNotification("Vui lòng chọn ít nhất một hình ảnh.", "error");
+
+    const validationErrors = validateForm();
+    setErrors(validationErrors);
+
+    if (Object.values(validationErrors).some((error) => error)) {
+      showNotification("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu.", "error");
       return;
     }
 
@@ -499,6 +699,7 @@ const EditProduct = () => {
       const token = localStorage.getItem("token");
       const productData = new FormData();
       productData.append("name", formData.name);
+      productData.append("slug", formData.slug);
       productData.append("status", formData.status);
       productData.append("id_category", formData.id_category);
       productData.append("id_brand", formData.id_brand);
@@ -601,10 +802,12 @@ const EditProduct = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={styles.input}
                   required
                   placeholder="Nhập tên sản phẩm"
                 />
+                {errors.name && <span className={styles.error}>{errors.name}</span>}
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Danh mục *</label>
@@ -612,6 +815,7 @@ const EditProduct = () => {
                   name="id_category"
                   value={formData.id_category}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={styles.select}
                   required
                 >
@@ -624,6 +828,7 @@ const EditProduct = () => {
                       </option>
                     ))}
                 </select>
+                {errors.id_category && <span className={styles.error}>{errors.id_category}</span>}
               </div>
             </div>
             <div className={styles.formRow}>
@@ -633,6 +838,7 @@ const EditProduct = () => {
                   name="id_brand"
                   value={formData.id_brand}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={styles.select}
                   required
                 >
@@ -645,6 +851,7 @@ const EditProduct = () => {
                       </option>
                     ))}
                 </select>
+                {errors.id_brand && <span className={styles.error}>{errors.id_brand}</span>}
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Trạng thái *</label>
@@ -666,11 +873,13 @@ const EditProduct = () => {
                 name="short_description"
                 value={formData.short_description}
                 onChange={handleInputChange}
+                onBlur={handleInputBlur}
                 className={styles.textarea}
                 required
                 placeholder="Nhập mô tả ngắn (tối đa 200 ký tự)"
                 maxLength={200}
               />
+              {errors.short_description && <span className={styles.error}>{errors.short_description}</span>}
             </div>
           </div>
 
@@ -696,13 +905,16 @@ const EditProduct = () => {
                           placeholder="e.g., 50"
                           value={option.value}
                           onChange={(e) => handleOptionChange(index, "value", e.target.value)}
+                          onBlur={() => handleOptionBlur(index, "value")}
                           className={styles.input}
                           required
                           min="0"
+                          step="0.01"
                         />
                         <select
                           value={option.unit}
                           onChange={(e) => handleOptionChange(index, "unit", e.target.value)}
+                          onBlur={() => handleOptionBlur(index, "unit")}
                           className={styles.unitSelect}
                           required
                         >
@@ -717,9 +929,11 @@ const EditProduct = () => {
                         placeholder="Giá gốc"
                         value={option.price}
                         onChange={(e) => handleOptionChange(index, "price", e.target.value)}
+                        onBlur={() => handleOptionBlur(index, "price")}
                         className={styles.input}
                         required
                         min="0"
+                        step="0.01"
                       />
                     </td>
                     <td>
@@ -728,8 +942,10 @@ const EditProduct = () => {
                         placeholder="Giá khuyến mãi"
                         value={option.discount_price}
                         onChange={(e) => handleOptionChange(index, "discount_price", e.target.value)}
+                        onBlur={() => handleOptionBlur(index, "discount_price")}
                         className={styles.input}
                         min="0"
+                        step="0.01"
                       />
                     </td>
                     <td>
@@ -738,9 +954,11 @@ const EditProduct = () => {
                         placeholder="Số lượng"
                         value={option.stock}
                         onChange={(e) => handleOptionChange(index, "stock", e.target.value)}
+                        onBlur={() => handleOptionBlur(index, "stock")}
                         className={styles.input}
                         required
                         min="0"
+                        step="1"
                       />
                     </td>
                     <td>
@@ -754,6 +972,7 @@ const EditProduct = () => {
                 ))}
               </tbody>
             </table>
+            {errors.options && <span className={styles.error}>{errors.options}</span>}
             <button type="button" className={styles.addOptionBtn} onClick={addOption}>
               Thêm tùy chọn +
             </button>
@@ -767,8 +986,10 @@ const EditProduct = () => {
               className={styles.editor}
               contentEditable
               onInput={handleDescriptionChange}
+              onBlur={handleDescriptionBlur}
               data-placeholder="Nhập mô tả sản phẩm chi tiết, thành phần, hướng dẫn sử dụng, đặc điểm nổi bật..."
             />
+            {errors.description && <span className={styles.error}>{errors.description}</span>}
           </div>
 
           <div className={styles.formGroup}>
@@ -812,6 +1033,7 @@ const EditProduct = () => {
                 accept="image/*"
                 multiple
                 onChange={handleFileChange}
+                onBlur={handleImageBlur}
                 className={styles.fileInput}
                 id="imageInput"
                 disabled={existingImages.length + formData.images.length >= 4}
@@ -830,6 +1052,7 @@ const EditProduct = () => {
                 </span>
               </label>
             </div>
+            {errors.images && <span className={styles.error}>{errors.images}</span>}
             {formData.images.length > 0 && (
               <div className={styles.imageSection}>
                 <h4 className={styles.sectionTitle}>Ảnh mới sẽ thêm:</h4>

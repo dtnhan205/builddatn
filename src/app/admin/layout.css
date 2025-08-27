@@ -9,7 +9,7 @@
 
 
 .sidebar {
-    z-index: 1000;
+    z-index: 100;
     width: 220px;
     background: #ffffff;
     height: 100vh;
@@ -30,9 +30,8 @@
 }
 
 .menu {
-    z-index: 1000;
+    z-index: 100;
     padding: 15px 0;
-    z-index: 1000;
 }
 
 .menu-item {
@@ -81,7 +80,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    z-index: 1000;
+    z-index: 100;
    
 }
 

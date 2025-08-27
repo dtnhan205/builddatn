@@ -120,7 +120,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             { href: "/admin/coupons", label: "Khuyến mãi" },
             { href: "/admin/customer", label: "Khách hàng" },
             { href: "/admin/interface_config", label: "Hình ảnh website" },
-            { href: "/admin/payment", label: "Lịch sử chuyển khoản" },
             { href: "/admin/contact", label: "Liên hệ" },
             { href: "/", label: "Truy cập trang khách" },
           ].map((item) => (

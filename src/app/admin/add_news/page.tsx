@@ -227,6 +227,7 @@ const AddBlog = () => {
           img.alt = "Image";
           img.style.maxWidth = "100%";
           img.style.height = "auto";
+          img.className = styles.editorImage; // Thêm class để áp dụng kiểu responsive
 
           range.insertNode(img);
           range.insertNode(document.createTextNode(" "));

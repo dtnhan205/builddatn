@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import styles from "./interface_config.module.css";
 import ToastNotification from "../../user/ToastNotification/ToastNotification";
 
-// Định nghĩa kiểu dữ liệu cho previews
 type PreviewType = {
   logo: string | null;
   favicon: string | null;
@@ -17,9 +16,20 @@ type PreviewType = {
   [key: string]: string | string[] | null;
 };
 
+const imageDimensions: { [key: string]: { width: number; height: number } } = {
+  logo: { width: 185, height: 150 }, 
+  favicon: { width: 185, height: 150 }, 
+  banner1: { width: 1920, height: 732.5 },
+  banner2: { width: 1920, height: 900 },
+  decor: { width: 630, height: 1125 },
+  banner3: { width: 1920, height: 1090 },
+  bannerAbout: { width: 1920, height: 760 },
+  bannerNews: { width: 1920, height: 760 }, 
+};
+
 export default function ConfigPage() {
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<null | "success" | "error" | "warning">(null)
+  const [messageType, setMessageType] = useState<null | "success" | "error" | "warning">(null);
   const [loading, setLoading] = useState(false);
   const [previews, setPreviews] = useState<PreviewType>({
     logo: null,
@@ -139,7 +149,6 @@ export default function ConfigPage() {
       const timer = setTimeout(() => {
         setMessage("");
         setMessageType(null);
-
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -164,12 +173,43 @@ export default function ConfigPage() {
     }
   };
 
+  // Hàm kiểm tra kích thước ảnh
+  const checkImageDimensions = (file: File, type: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const { width, height } = img;
+        const targetDimensions = imageDimensions[type];
+        if (!targetDimensions) {
+          resolve(true); // Không kiểm tra nếu không có tỉ lệ định nghĩa
+          return;
+        }
+
+        const targetRatio = targetDimensions.width / targetDimensions.height;
+        const imageRatio = width / height;
+        const tolerance = 0.05; // Dung sai ±5%
+
+        // Kiểm tra tỉ lệ
+        const isValidRatio = Math.abs(imageRatio - targetRatio) <= targetRatio * tolerance;
+
+        // Kiểm tra kích thước tối thiểu (chỉ áp dụng cho banner1, banner2, decor, banner3, bannerAbout, bannerNews)
+        const isValidSize =
+          type === "logo" || type === "favicon"
+            ? true // Không kiểm tra kích thước cụ thể cho logo và favicon
+            : width >= targetDimensions.width * 0.95 && height >= targetDimensions.height * 0.95;
+
+        resolve(isValidRatio && isValidSize);
+      };
+      img.onerror = () => resolve(false);
+    });
+  };
+
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>, type: string) => {
     event.preventDefault();
     setLoading(true);
     setMessage("");
     setMessageType(null);
-
 
     const token = localStorage.getItem("token");
     if (!validateToken(token)) {
@@ -198,6 +238,23 @@ export default function ConfigPage() {
       setMessageType("warning");
       setLoading(false);
       return;
+    }
+
+    // Kiểm tra kích thước ảnh
+    for (const file of files) {
+      const isValid = await checkImageDimensions(file, type);
+      if (!isValid) {
+        const dimensionText =
+          type === "logo" || type === "favicon"
+            ? "hình vuông (tỉ lệ 1:1)"
+            : `${imageDimensions[type]?.width || "N/A"}x${imageDimensions[type]?.height || "N/A"} px`;
+        setMessage(
+          `Hình ảnh ${type} không đúng tỉ lệ. Yêu cầu: ${dimensionText} (±5%).`
+        );
+        setMessageType("error");
+        setLoading(false);
+        return;
+      }
     }
 
     formData.delete(type);
@@ -318,7 +375,6 @@ export default function ConfigPage() {
           onClose={() => {
             setMessage("");
             setMessageType(null);
-
           }}
         />
       )}

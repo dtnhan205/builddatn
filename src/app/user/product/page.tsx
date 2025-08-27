@@ -120,37 +120,18 @@ export default function ProductPage() {
       const selectedOption = product.option[0];
       const quantity = 1;
       const userId = localStorage.getItem("userId");
+      const token = localStorage.getItem("token");
 
       if (selectedOption.stock < quantity) {
         showToast("error", "Số lượng vượt quá tồn kho!");
         return;
       }
 
-      if (!userId) {
-        try {
-          const cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
-          const existingItemIndex = cartItems.findIndex(
-            (item: any) => item.id === product._id && item.optionId === (selectedOption._id || selectedOption.value)
-          );
-
-          if (existingItemIndex !== -1) {
-            cartItems[existingItemIndex].quantity += quantity;
-          } else {
-            cartItems.push({
-              id: product._id,
-              name: product.name,
-              optionId: selectedOption._id || selectedOption.value,
-              price: selectedOption.discount_price || selectedOption.price,
-              image: product.images?.[0] || ERROR_IMAGE_URL,
-              quantity,
-            });
-          }
-
-          localStorage.setItem("cart", JSON.stringify(cartItems));
-          showToast("success", "Đã thêm vào giỏ hàng!");
-        } catch (error) {
-          showToast("error", "Lỗi khi thêm vào giỏ hàng local!");
-        }
+      if (!userId || !token) {
+        showToast("warning", "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
+        setTimeout(() => {
+          window.location.href = "/user/login";
+        }, 2000);
         return;
       }
 

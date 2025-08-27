@@ -300,6 +300,7 @@ const EditBlog = () => {
           const img = document.createElement("img");
           img.src = dataUrl;
           img.alt = "Image";
+          img.className = styles.editorImage; // Thêm class để áp dụng kiểu responsive
           img.style.maxWidth = "100%";
           img.style.height = "auto";
 
