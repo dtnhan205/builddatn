@@ -376,7 +376,7 @@ const Chatbot: React.FC = () => {
                                 : "Liên hệ"}
                             </p>
                             <a
-                              href={`https://purebotanica.online/user/detail/${product.slug || convertToSlug(product.name)}`}
+                              href={`/user/detail/${product.slug || convertToSlug(product.name)}`}
                               className="product-link"
                             >
                               Xem
@@ -432,7 +432,7 @@ const Chatbot: React.FC = () => {
                             {news.publishedAt && `Đăng lúc: ${new Date(news.publishedAt).toLocaleDateString("vi-VN")}`}
                           </p>
                           <a
-                            href={`https://purebotanica.online/news/${news.slug}`}
+                            href={`/news/${news.slug}`}
                             className="news-link"
                           >
                             Đọc

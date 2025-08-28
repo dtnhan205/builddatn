@@ -282,23 +282,29 @@ function CouponsContent() {
         }
       }
       if (isAutoSetupFormData(data)) {
-        if (!data.specialDays.length) {
-          errors.push("Vui lòng nhập ít nhất một ngày đặc biệt!");
-        } else {
-          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-          for (const day of data.specialDays) {
-            if (!dateRegex.test(day.date)) {
-              errors.push(
-                "Ngày đặc biệt phải đúng định dạng YYYY-MM-DD (ví dụ: 2025-09-02)!"
-              );
-              break;
-            }
-            if (day.description && day.description.length > 200) {
-              errors.push(`Mô tả cho ngày ${day.date} không được vượt quá 200 ký tự!`);
-            }
-          }
-        }
+  if (!data.specialDays.length) {
+    errors.push("Vui lòng nhập ít nhất một ngày đặc biệt!");
+  } else {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    for (const day of data.specialDays) {
+      if (!dateRegex.test(day.date)) {
+        errors.push(
+          "Ngày đặc biệt phải đúng định dạng YYYY-MM-DD (ví dụ: 2025-09-02)!"
+        );
+        continue;
       }
+      // Kiểm tra ngày hợp lệ
+      const date = new Date(day.date);
+      if (isNaN(date.getTime())) {
+        errors.push(`Ngày ${day.date} không hợp lệ!`);
+        continue;
+      }
+      if (day.description && day.description.length > 200) {
+        errors.push(`Mô tả cho ngày ${day.date} không được vượt quá 200 ký tự!`);
+      }
+    }
+  }
+}
       return errors;
     },
     []
@@ -368,27 +374,30 @@ function CouponsContent() {
 
   // Lấy cấu hình tự động
   const fetchAutoSetupConfig = useCallback(async () => {
-    try {
-      const response = await fetchWithToken(
-        "https://api-zeal.onrender.com/api/coupons/auto-setup",
-        { method: "GET", cache: "no-store" }
-      );
-      const data = await response.json();
-      if (data.success && data.config) {
-        const config: AutoSetupConfig = data.config;
-        setAutoSetupFormData({
-          discountType: config.discountType,
-          discountValue: config.discountValue,
-          minOrderValue: config.minOrderValue,
-          expiryDays: config.expiryDays,
-          usageLimit: config.usageLimit,
-          specialDays: config.specialDays,
-        });
-      }
-    } catch (err) {
-      handleError(err, "Lỗi khi tải cấu hình tự động!");
+  setActionLoading(true); // Thêm dòng này
+  try {
+    const response = await fetchWithToken(
+      "https://api-zeal.onrender.com/api/coupons/auto-setup",
+      { method: "GET", cache: "no-store" }
+    );
+    const data = await response.json();
+    if (data.success && data.config) {
+      const config: AutoSetupConfig = data.config;
+      setAutoSetupFormData({
+        discountType: config.discountType,
+        discountValue: config.discountValue,
+        minOrderValue: config.minOrderValue,
+        expiryDays: config.expiryDays,
+        usageLimit: config.usageLimit,
+        specialDays: config.specialDays,
+      });
     }
-  }, [handleError, setAutoSetupFormData]);
+  } catch (err) {
+    handleError(err, "Lỗi khi tải cấu hình tự động!");
+  } finally {
+    setActionLoading(false); // Thêm dòng này
+  }
+}, [handleError, setAutoSetupFormData]);
 
   // Kiểm tra quyền truy cập
   useEffect(() => {
@@ -622,58 +631,62 @@ function CouponsContent() {
 
   // Xử lý submit form thiết lập tự động
   const handleAutoSetupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (actionLoading) return;
+  e.preventDefault();
+  if (actionLoading) return;
 
-    const errors = validateForm(autoSetupFormData);
-    if (errors.length > 0) {
-      setNotification({ show: true, message: errors.join(", "), type: "error" });
-      setTimeout(
-        () => setNotification({ show: false, message: "", type: "success" }),
-        3000
-      );
-      return;
-    }
+  const errors = validateForm(autoSetupFormData);
+  if (errors.length > 0) {
+    setNotification({ show: true, message: errors.join(", "), type: "error" });
+    setTimeout(
+      () => setNotification({ show: false, message: "", type: "success" }),
+      3000
+    );
+    return;
+  }
 
-    setActionLoading(true);
-    try {
-      const bodyData = {
-        discountType: autoSetupFormData.discountType,
-        discountValue: autoSetupFormData.discountValue,
-        minOrderValue: autoSetupFormData.minOrderValue,
-        expiryDays: autoSetupFormData.expiryDays,
-        usageLimit: autoSetupFormData.usageLimit,
-        specialDays: autoSetupFormData.specialDays,
-      };
+  setActionLoading(true);
+  try {
+    const bodyData = {
+      discountType: autoSetupFormData.discountType,
+      discountValue: autoSetupFormData.discountValue,
+      minOrderValue: autoSetupFormData.minOrderValue,
+      expiryDays: autoSetupFormData.expiryDays,
+      usageLimit: autoSetupFormData.usageLimit,
+      specialDays: autoSetupFormData.specialDays,
+    };
 
-      const response = await fetchWithToken(
-        "https://api-zeal.onrender.com/api/coupons/auto-setup",
-        {
-          method: "POST",
-          body: JSON.stringify(bodyData),
-          cache: "no-store",
-        }
-      );
+    const response = await fetchWithToken(
+      "https://api-zeal.onrender.com/api/coupons/auto-setup",
+      {
+        method: "POST",
+        body: JSON.stringify(bodyData),
+        cache: "no-store",
+      }
+    );
 
-      const data = await response.json();
-      setShowAutoSetupModal(false);
-      resetAutoSetupForm();
-      setNotification({
-        show: true,
-        message: "Cài đặt tự động tạo mã giảm giá thành công!",
-        type: "success",
-      });
-      setTimeout(
-        () => setNotification({ show: false, message: "", type: "success" }),
-        3000
-      );
-      await fetchAutoSetupConfig();
-    } catch (err) {
-      handleError(err, "Lỗi khi thiết lập tự động!");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+    const data = await response.json();
+    setShowAutoSetupModal(false);
+    resetAutoSetupForm();
+    const message = data.coupon
+      ? `Cài đặt tự động thành công! Mã giảm giá ${data.coupon.code} đã được tạo.`
+      : "Cài đặt tự động tạo mã giảm giá thành công!";
+    setNotification({
+      show: true,
+      message,
+      type: "success",
+    });
+    setTimeout(
+      () => setNotification({ show: false, message: "", type: "success" }),
+      3000
+    );
+    await fetchAutoSetupConfig();
+    await fetchCoupons(); // Thêm dòng này để làm mới danh sách mã giảm giá
+  } catch (err) {
+    handleError(err, "Lỗi khi thiết lập tự động!");
+  } finally {
+    setActionLoading(false);
+  }
+};
 
   // Sửa mã giảm giá
   const handleEdit = useCallback(
